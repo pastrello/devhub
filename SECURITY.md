@@ -1,0 +1,3 @@
+# Security
+
+Laboratory only. No production access, privileged execution, automatic shell execution, cloud fallback, credential handling or account creation. Use trusted endpoints on private networks; prefer HTTPS. HTTP redirects and ambient proxies are refused. Do not use confidential prompts as CLI arguments. Local model tags are not proof of local execution: verify actual backend, model licensing, integrity, and no cloud routing. Restrict access to the state directory. Never publish secrets in this public repository. No claim of complete sandboxing or zero indirect electricity/network costs. Report security issues privately to the maintainer; do not post secrets in public issues.
