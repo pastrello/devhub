@@ -1,4 +1,4 @@
-# DevHub 0.1.0 (PoC)
+# DevHub 0.1.1 (Engine Manager PoC)
 
 **Local first. Subscription first. Pay-per-use last.**
 
@@ -67,3 +67,67 @@ Novo guia experimental: [docs/proxmox-rocky9-ollama.md](docs/proxmox-rocky9-olla
 ## Falha no laboratório: llama-server não encontrado
 
 Se `ollama run` reportar `llama-server binary not found`, não é necessário apagar o modelo. Na branch de laboratório, use `bash scripts/repair-ollama-lxc.sh --check`, confira `/usr/lib/ollama/llama-server` e, após snapshot, `bash scripts/repair-ollama-lxc.sh --repair`. O reparo só altera a instalação depois de verificar que o pacote oficial contém o runtime de inferência. Consulte [guia do laboratório](docs/proxmox-rocky9-ollama.md).
+
+## Engine Manager 0.1.1 (branch de laboratório)
+
+O Engine Manager disponibiliza um catálogo **curado e offline** de motores e modelos pequenos, descoberta de GPU via `nvidia-smi`, inventário de modelos instalados no Ollama, inspeção, teste de inferência e gestão supervisionada. **Não** equivale ainda à pesquisa dinâmica da Internet nem instala automaticamente qualquer motor.
+
+### Instalação simplificada para root no Rocky Linux 9 LXC
+
+Faça snapshot do LXC antes de atualizar. Na branch `feat/lxc-rocky9-ollama-lab`:
+
+```bash
+cd /root/software/devhub
+git pull --ff-only
+bash install-system.sh --check
+bash install-system.sh --install
+devhub --version
+```
+
+O instalador administrativo é executado como root, instala o programa em `/opt/devhub`, cria usuário/grupo isolados `devhub`, mantém releases anteriores e fornece rollback via `bash install-system.sh --rollback`. **Mesmo quando chamado pelo root, o comando `devhub` do sistema executa sob o usuário sem privilégios.** Não instala Ollama, altera drivers nem compra serviços.
+
+Caso não queira a instalação global, use o instalador por usuário `bash install.sh` fora da conta root.
+
+### Primeiros comandos
+
+```bash
+devhub engines list
+devhub engines status
+devhub engines install ollama    # Apenas instruções, não altera serviços
+devhub gpu
+devhub models installed
+devhub models running
+devhub models search coder
+devhub models recommend --task coding
+devhub models inspect qwen3:4b
+devhub models test qwen3:4b --trust-local-endpoint
+devhub costs
+```
+
+### Baixar um modelo local autorizado
+
+Confirme a licença, o nome do modelo, o consumo de disco, o endereço de Ollama e as limitações do hardware:
+
+```bash
+devhub models pull qwen2.5-coder:3b --confirm-download --trust-local-endpoint
+```
+
+A primeira versão aceita downloads via Engine Manager **somente dos tags da lista curada**, e não de nomes arbitrários retornados por fontes não confiáveis. O tamanho do download é aproximado; o Ollama e suas dependências podem utilizar mais espaço. A verificação opcional `--models-dir /CAMINHO` consulta o espaço livre em um diretório existente que o usuário devhub consiga acessar, mas não comprova que ele corresponde ao storage real do Ollama.
+
+Exclusão de modelos:
+
+```bash
+devhub models delete qwen2.5-coder:3b --confirm-delete --trust-local-endpoint
+```
+
+A API é inicialmente considerada não confiável para execução de modelos até que você confirme que o endpoint não encaminha pedidos para um provedor cloud. Endpoints em outra máquina exigem transporte privado/criptografado; **não exponha a API não autenticada do Ollama à Internet**.
+
+### Limitações conhecidas
+
+- Busca de modelos na Internet ainda não implementada; catálogo embutido com referência à fonte oficial.
+- Compatibilidade de VRAM é aproximação baseada no tamanho dos pesos; **não é teste de desempenho nem garantia de execução GPU**.
+- O instalador de motores via CLI fornece instruções, mas instalação efetiva continua no bootstrap administrativo supervisionado.
+- LiteLLM é somente inventário, sem inferência cloud.
+- Nenhum modelo/componente foi baixado pelo Engine Manager durante os testes automatizados, que utilizam mocks. Inferência Qwen3 4B foi demonstrada manualmente pelo operador no LXC.
+
+Referências de API: [Ollama API](https://docs.ollama.com/api), [Biblioteca Ollama](https://ollama.com/library).
