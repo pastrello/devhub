@@ -9,6 +9,7 @@ command -v "$python_bin" >/dev/null || { echo 'Install Python 3.12 first (Rocky 
 install -d -m 700 "$HOME/.local/lib/devhub" "$HOME/.local/bin"
 install -m 600 devhub.py "$HOME/.local/lib/devhub/devhub.py"
 install -m 600 engine_manager.py "$HOME/.local/lib/devhub/engine_manager.py"
+install -m 600 online_catalog.py "$HOME/.local/lib/devhub/online_catalog.py"
 printf '#!/usr/bin/env bash\nexec %q %q "$@"\n' "$(command -v "$python_bin")" "$HOME/.local/lib/devhub/devhub.py" > "$HOME/.local/bin/devhub"
 chmod 700 "$HOME/.local/bin/devhub"
 "$HOME/.local/bin/devhub" --version
