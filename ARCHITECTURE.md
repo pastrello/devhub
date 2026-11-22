@@ -13,3 +13,8 @@
 `engine_manager.py` fornece metadados estáticos e inspeção de GPU sem privilegiar processos. `devhub.py` contém a interface CLI, políticas de autorização explícita e adaptador Ollama. Não há instalação automática silenciosa. `install-system.sh` é o único instalador root do aplicativo, com execução subsequente como usuário isolado. Scripts de instalação de Ollama continuam separados. Diretório `/var/lib/devhub` não armazena credenciais comerciais.
 
 Seleção por tarefa é apenas filtragem estática; modelos curados não são verificados dinamicamente nem garantia de compatibilidade. Em versões futuras: catálogos de fontes oficiais, manifests assinados, ciclos de vida dos motores, checagem de espaço conforme storage real, quota e worker manager.
+
+
+## Official discovery adapters (0.1.2)
+
+`online_catalog.py` is metadata-only; fixed HTTPS hosts/paths, short timeouts, capped responses, no redirects, no ambient proxy, no credential forwarding. Hugging Face entries are NOT Ollama tags; they remain informational until an independently verified compatible image, license, footprint and origin are mapped and explicitly approved. GitHub release metadata never triggers an installer. `models fit` compares only curated **estimated weight size** against free VRAM (with a 1 GiB planning margin); it cannot determine runtime speed, KV-cache requirements, supported GPU compute, quantization or whether the LXC can offload successfully. User-controlled queries are sent to Hugging Face and cached locally; no private prompts or project secrets should be entered. Existing local model operations retain confirmation checks and default-deny cloud execution.
