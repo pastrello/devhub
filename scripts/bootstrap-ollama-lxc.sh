@@ -38,9 +38,18 @@ url='https://ollama.com/download/ollama-linux-amd64.tar.zst'
 echo "Downloading official Ollama Linux AMD64 package from $url"
 curl --fail --location --show-error --silent --proto '=https' --tlsv1.2 --output "$work/ollama.tar.zst" "$url"
 tar --zstd -tf "$work/ollama.tar.zst" >/dev/null
-# Additional checksum/signature verification is a future hardening requirement.
-tar --zstd -xf "$work/ollama.tar.zst" -C /usr --no-same-owner
-[[ -x /usr/bin/ollama ]] || { echo 'Binary missing after extraction' >&2; exit 1; }
+mkdir -p "$work/stage"
+tar --zstd -xf "$work/ollama.tar.zst" -C "$work/stage" --no-same-owner
+# Do not install a superficially valid CLI without its llama.cpp inference engine.
+[[ -x "$work/stage/bin/ollama" && -x "$work/stage/lib/ollama/llama-server" ]] || {
+  echo 'Incomplete Ollama package: missing bin/ollama or lib/ollama/llama-server; no system files modified.' >&2
+  exit 1
+}
+# Additional independently published checksum/signature verification is still needed.
+install -m 0755 "$work/stage/bin/ollama" /usr/bin/ollama
+mkdir -p /usr/lib
+cp -a "$work/stage/lib/ollama" /usr/lib/ollama
+[[ -x /usr/lib/ollama/llama-server ]] || { echo 'Inference engine missing after extraction' >&2; exit 1; }
 if ! id -u ollama >/dev/null 2>&1; then
   useradd -r -s /sbin/nologin -U -m -d /usr/share/ollama ollama
 fi
