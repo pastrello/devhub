@@ -105,8 +105,8 @@ def storage_probe(path, required_bytes):
             "estimated_required_bytes": recommended, "enough_by_estimate": free >= recommended,
             "notice": "Estimated reserve is not a guarantee; the actual Ollama store may reside on another mount"}
 
-def preflight(tag, path, fetch=fetch_manifest):
-    manifest = fetch(tag)
+def preflight(tag, path, fetch=None):
+    manifest = (fetch or fetch_manifest)(tag)
     if manifest.get("model") != tag:
         raise RegistryError("Manifest identity mismatch")
     disk = storage_probe(path, manifest["total_bytes"])
