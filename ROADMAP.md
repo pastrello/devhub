@@ -36,3 +36,18 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Verify exact artifact, license, quantization, RAM/VRAM and storage before automated installation.
 - [ ] Engine upgrade workflow with provenance, semantic compatibility, tested rollback and explicit administrator approval.
 - [ ] Add authenticated remote workers and agent management, benchmark metrics, PostgreSQL queue.
+
+
+## 0.1.3 implemented / pending
+
+- [x] Read official registry model manifest with known default-library tag.
+- [x] Validate layer names, SHA256 digest formatting and byte sizes; summarize estimated download footprint.
+- [x] Explicit storage mount planning, estimated reserve and refusal on insufficient disk.
+- [x] Plan fingerprint and 1-hour expiry, dual authorization plus license-review declaration.
+- [x] Recheck mutable registry fingerprint before invoking model download; verify installed inventory.
+- [x] Block remote endpoints for unattended installation until trusted worker protocol exists.
+- [ ] Validate official API response against qwen2.5-coder:3b from IA-01.
+- [ ] Support recent Ollama manifest lists and platform-specific runners.
+- [ ] Verify actual downloaded digest, licensing, GPU memory and quantization.
+- [ ] Implement authenticated worker agents and multi-LXC inventory.
+- [ ] Create a streamlined interactive model search/choice/install UI.

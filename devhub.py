@@ -8,9 +8,12 @@ import sqlite3
 import sys
 import engine_manager as em
 import online_catalog as oc
+import ollama_registry as rg
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlsplit
 from urllib import request, error, parse
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
@@ -105,6 +108,10 @@ class State:
     def catalog(self):
         return {k: json.loads(v) for k,v in self.db.execute('SELECT source,snapshot FROM registry')}
 
+    def snapshot(self, source):
+        row = self.db.execute('SELECT snapshot FROM registry WHERE source=?', (source,)).fetchone()
+        return json.loads(row[0]) if row else None
+
     def costs(self):
         return {'additional_cloud_budget_usd': 0, 'cloud_execution_enabled': False, 'events': dict(self.db.execute('SELECT action || ":" || status, COUNT(*) FROM events GROUP BY action,status')), 'local_energy_cost': 'unknown'}
 
@@ -135,6 +142,12 @@ def configure_engine_parsers(sub):
     rec = mod.add_parser('recommend'); rec.add_argument('--task', choices=['general','reasoning','coding','vision'], default='coding')
     online = mod.add_parser('online'); online.add_argument('query'); online.add_argument('--limit', type=int, default=10)
     fit = mod.add_parser('fit'); fit.add_argument('model'); fit.add_argument('--models-dir')
+    preflight = mod.add_parser('preflight', help='Check official Ollama manifest and storage before an approved download')
+    preflight.add_argument('model'); preflight.add_argument('--storage-path', required=True)
+    acquire = mod.add_parser('install', help='Download an approved model after saved manifest preflight')
+    acquire.add_argument('model'); acquire.add_argument('--confirm-download', action='store_true')
+    acquire.add_argument('--license-reviewed', action='store_true')
+    acquire.add_argument('--trust-local-endpoint', action='store_true')
     for name in ('installed', 'running'):
         mod.add_parser(name)
     show = mod.add_parser('inspect'); show.add_argument('model')
@@ -164,6 +177,43 @@ def manage(a, ollama, state):
                                  'bash scripts/bootstrap-ollama-lxc.sh --check',
                                  'sudo bash scripts/bootstrap-ollama-lxc.sh --install'],
                 'note': 'Commands are guidance only; nothing executed'}
+    if a.model_command == 'preflight':
+        if not rg.valid_tag(a.model):
+            raise Blocked('Invalid default-library Ollama model tag')
+        result = rg.preflight(a.model, a.storage_path)
+        result['ollama_endpoint'] = ollama.http.base
+        state.save('pull-plan:' + a.model, result)
+        return result
+    if a.model_command == 'install':
+        if not (a.confirm_download and a.license_reviewed and a.trust_local_endpoint):
+            raise Blocked('Explicit --confirm-download --license-reviewed --trust-local-endpoint are required')
+        if not rg.valid_tag(a.model):
+            raise Blocked('Invalid default-library Ollama model tag')
+        endpoint = urlsplit(ollama.http.base)
+        if endpoint.hostname not in ('127.0.0.1', 'localhost', '::1'):
+            raise Blocked('Automated model installation is restricted to local Ollama; remote workers require authenticated transport')
+        approval = state.snapshot('pull-plan:' + a.model)
+        if not isinstance(approval, dict) or approval.get('status') != 'ready_for_review':
+            raise Blocked('Run models preflight first and resolve storage warnings')
+        if approval.get('ollama_endpoint') != ollama.http.base or approval.get('model') != a.model:
+            raise Blocked('Endpoint/model differs from approved preflight')
+        timestamp = datetime.fromisoformat(approval['created_at'])
+        age = datetime.now(timezone.utc) - timestamp
+        if not timedelta(0) <= age <= timedelta(hours=1):
+            raise Blocked('Preflight expired; prepare a new plan')
+        current = rg.fetch_manifest(a.model)
+        if not rg.same_manifest(approval.get('manifest'), current):
+            raise Blocked('Registry manifest changed since preflight; run preflight again')
+        disk = rg.storage_probe(approval['disk']['path'], current['total_bytes'])
+        if not disk['enough_by_estimate']:
+            raise Blocked('Insufficient space in selected storage filesystem')
+        outcome = ollama.pull(a.model)
+        if outcome.get('status') != 'success':
+            raise Blocked('Ollama did not confirm download')
+        if a.model not in [m.get('name') for m in ollama.inventory()]:
+            raise Blocked('Download responded success but model is not listed by local Ollama')
+        return {'status': 'success', 'installed_model': a.model, 'preflight_sha256': current['manifest_sha256'],
+                'notice': 'Ollama registry tag may be mutable after preflight. Validate model license, size and GPU offload before use.'}
     if a.model_command == 'online':
         result = oc.search_huggingface(a.query, a.limit)
         state.save('huggingface:' + a.query.casefold().strip(), result)
@@ -285,9 +335,9 @@ def main(argv=None):
         state.event(action, out.get('status','ok'))
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0 if out.get('status') not in ('blocked','review') else 2
-    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError) as exc:
         state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
-        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError)) else type(exc).__name__}), file=sys.stderr)
+        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError)) else type(exc).__name__}), file=sys.stderr)
         return 2
     finally:
         state.db.close()

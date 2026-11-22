@@ -26,3 +26,13 @@
 - Security: allowlisted public HTTPS APIs, no arbitrary URLs, no credentials/redirects, size and timeout bounds.
 - No automatic model imports from Hugging Face, no cloud billing, no engine upgrades.
 - 41/41 development unit tests passed; live-network/LXC version 0.1.2 testing pending.
+
+
+## 0.1.3 — Registry preflight and supervised model acquisition (unmerged lab branch)
+
+- Added official Ollama registry manifest inspection with digest/size checks and disk reserve estimates.
+- New CLI commands: `models preflight` and `models install` with review gate and 1-hour expiry.
+- Registry fingerprint must remain unchanged, download must be explicitly approved, and Ollama endpoint must be loopback for automated install.
+- Fail-closed on unsupported manifest-list schema, unknown license or capacity problems; licensed review remains human.
+- No commercial services, cloud calls for inference or automatic infrastructure modifications.
+- 15 registry parser tests executed locally; CLI regression CI requested, and real Rocky LXC test pending.

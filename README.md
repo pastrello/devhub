@@ -165,3 +165,37 @@ O tráfego HTTPS de metadados utiliza somente `huggingface.co/api/models` e `api
 Testes de desenvolvimento: **41/41 unitários**, sem integração externa ao vivo (internet indisponível no ambiente de testes). Nenhuma operação real de download, pagamento ou upgrade realizada. Os testes de integração com seu Rocky 9 ainda precisam de homologação.
 
 Fontes: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api e https://docs.ollama.com/api
+
+
+## DevHub 0.1.3 — pré-verificação oficial e instalação supervisionada
+
+A novidade é a consulta **somente leitura** do manifesto do registro oficial do Ollama para obter os tamanhos de camadas, com aprovação separada para instalação. A busca do Hugging Face continua informativa, **sem importar modelos arbitrários**.
+
+No laboratório Rocky Linux 9 LXC, após `git fetch` e mudar para `feat/registry-preflight-0.1.3`, executar `bash install-system.sh --check` e `bash install-system.sh --install` para atualizar de 0.1.2 para 0.1.3.
+
+Antes do comando abaixo, confirme em qual filesystem o Ollama realmente armazena modelos com `df -T /var/lib/ollama/models /var/lib`. O usuário `devhub` pode não ter permissão para verificar diretamente `/var/lib/ollama/models`; **não altere permissões por isso**. Se ambos estiverem no mesmo filesystem, utilize o diretório legível `/var/lib` para estimar espaço, deixando claro que a estimativa não considera cotas específicas.
+
+```bash
+devhub --version
+devhub models online "qwen coder" --limit 5
+devhub models preflight qwen2.5-coder:3b --storage-path /var/lib
+```
+
+O `preflight` consulta `https://registry.ollama.ai/v2/library/...`, exige um manifesto com camadas locais de pesos e guarda o hash do manifesto no estado SQLite com validade de uma hora. Exibe os bytes estimados de download, espaço disponível e avisos sobre licença e GPU. Não instala nem altera modelos.
+
+Depois de avaliar a licença em sua fonte oficial, confirmar que a API Ollama usa inferência local e aprovar o consumo de disco:
+
+```bash
+devhub models install qwen2.5-coder:3b \
+  --confirm-download --license-reviewed --trust-local-endpoint
+devhub models test qwen2.5-coder:3b --trust-local-endpoint
+devhub models running
+```
+
+A instalação reconsulta o manifesto, bloqueia se o hash mudou, verifica o espaço e só então chama a API Ollama para baixar o modelo. O endpoint deve ser loopback; a instalação em workers remotos exigirá um protocolo autenticado. O modelo deve aparecer na lista do Ollama depois do download.
+
+**Limitações:** para evitar escolhas incorretas de runner, o pré-verificador recusa listas de manifestos multi-plataforma; nesse caso não instala e indica que a resolução do manifesto precisa ser implementada. O pré-verificador não consegue comprovar licença, adequação CUDA, custo de energia, quantização ou integridade do modelo efetivamente instalado. Tags podem ser mutáveis, inclusive entre uma checagem e o download final. O fluxo histórico `models pull` continua disponível apenas para o catálogo curado; para novos modelos, utilize `preflight` e `install`.
+
+Nenhuma compra, login, integração cloud paga, atualização do Ollama ou instalação em outros contêineres é realizada automaticamente.
+
+Referências: https://registry.ollama.ai/ , https://docs.ollama.com/api/pull , https://docs.ollama.com/api/tags .
