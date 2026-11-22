@@ -28,3 +28,14 @@ Implementado em `feat/lxc-rocky9-ollama-lab`: catálogo local curado de motores 
 Validação de desenvolvimento: 29/29 testes unitários usando mocks e `bash -n` de instaladores no container de desenvolvimento (Python 3.13.5). Não houve execução dos novos recursos no LXC nem GitHub Actions comprovado. **Não** foram implementados busca dinâmica na web, benchmarks comparativos, descoberta autônoma de novos motores, download de motores pelo próprio aplicativo, instalação distribuída ou provedores cloud pagos.
 
 Próxima evidência requerida: instalar `install-system.sh` no Rocky 9, validar `devhub gpu`, `engines status`, `models installed/search/test` com Ollama local. O Ollama qwen3:4b já foi homologado manualmente no LXC; esse fato é independente dos novos comandos do DevHub.
+
+
+## DevHub 0.1.2 — pesquisa oficial e estimativa de adequação (branch de laboratório)
+
+Criada branch `feat/model-discovery-0.1.2` a partir da branch Rocky 9 LXC, como evolução revisável (sem alterar main). Adicionado `online_catalog.py`: pesquisa pública na API Hugging Face, leitura de releases do GitHub oficial dos motores Ollama, llama.cpp, vLLM e LiteLLM, hosts/endpoints fixos, sem credenciais/proxies/redirects e resposta limitada a 1 MiB. CLI: `models online`, `models fit`, `engines releases`. Snapshots armazenados em SQLite para inspeção. Instaladores preparados para copiar o novo módulo e atualizar a versão 0.1.2.
+
+Testes locais: 41/41 unitários (Python 3.13.5), e `bash -n` dos instaladores; fixtures simuladas, sem consulta web real e sem instalação no LXC. O operador havia confirmado testes do 0.1.1 em IA-01, mas **não** houve homologação da versão 0.1.2.
+
+Status: catálogo online **somente descoberta**, não instala automaticamente resultados do Hugging Face; a lista curada de tags Ollama permanece a única permitida para download. Verificações de VRAM/disco são aproximadas, sem benchmark de qualidade ou consumo real. Pesquisa na biblioteca web oficial do Ollama, downloads/atualizações de motores, dependências/licenças automatizadas e múltiplos workers com autenticação seguem pendentes.
+
+Segurança: nenhum recurso cloud pago ativado, nenhuma alteração no serviço Ollama existente, orçamento extra inicial US$ 0.
