@@ -16,3 +16,13 @@
 - Instalador global `install-system.sh`: somente instalação root, runtime usuário devhub, releases e rollback.
 - API cloud permanece bloqueada (orçamento adicional zero).
 - 29 testes unitários com mocks; homologação real no LXC ainda pendente.
+
+
+## 0.1.2 — official model discovery (test branch)
+
+- Added Hugging Face read-only search (`models online`) and official GitHub release lookup (`engines releases`).
+- Added `models fit` for conservative, clearly qualified GPU/disk sizing estimates on curated Ollama tags.
+- Snapshots of discovery and release metadata persist to SQLite.
+- Security: allowlisted public HTTPS APIs, no arbitrary URLs, no credentials/redirects, size and timeout bounds.
+- No automatic model imports from Hugging Face, no cloud billing, no engine upgrades.
+- 41/41 development unit tests passed; live-network/LXC version 0.1.2 testing pending.
