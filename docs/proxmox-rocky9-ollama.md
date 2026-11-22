@@ -49,3 +49,32 @@ The bootstrap is temporary. DevHub must offer an integrated engine directory (Ol
 - https://github.com/ollama/ollama/blob/main/docs/gpu.mdx
 - https://ollama.com/library/qwen3
 - https://forum.proxmox.com/threads/proxmox-older-nvidia-gpus-gtx-1060-p4000-v100-lxc-passthrough-guide-updated-june-2026.183835/
+
+
+## Incidente: `llama-server binary not found` no primeiro teste
+
+Em 2026-11-22, o bootstrap iniciou o serviço e o download `qwen3:4b` concluiu, mas `ollama run` falhou com HTTP 500 e `llama-server binary not found`. Esse erro acontece antes da inicialização CUDA; ainda não comprova problema no mapeamento NVIDIA. O bootstrap original validava somente o executável CLI; foi corrigido para exigir também `lib/ollama/llama-server` antes de instalar.
+
+Na máquina afetada:
+
+```bash
+cd /root/software/devhub
+git pull
+bash scripts/repair-ollama-lxc.sh --check
+ls -lh /usr/lib/ollama/llama-server
+find /usr -type f -name llama-server -print 2>/dev/null
+ollama --version
+```
+
+Se o diagnóstico confirmar falta do runtime, faça snapshot do LXC e depois:
+
+```bash
+bash scripts/repair-ollama-lxc.sh --repair
+ollama run qwen3:4b 'Teste de inferencia local.'
+ollama ps
+nvidia-smi
+```
+
+O reparador baixa novamente o arquivo oficial, extrai primeiro em área temporária e **interrompe sem modificar a instalação se o pacote não tiver o runtime**. Quando o pacote é válido, preserva o binário e as bibliotecas anteriores em `/var/backups/`, reinicia o serviço e mantém modelos em `/var/lib/ollama/models`. Se o arquivo oficial estiver incompleto, não fique reinstalando cegamente: reporte o resultado e considere versão oficial anterior após checar changelog e release. Não use `cmake` para compilar um `llama-server` arbitrário nesse laboratório; o motor precisa ser compatível com a versão exata.
+
+Referências: https://docs.ollama.com/linux e https://github.com/ollama/ollama/blob/main/llm/llama_server.go.
