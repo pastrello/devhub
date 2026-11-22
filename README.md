@@ -131,3 +131,37 @@ A API é inicialmente considerada não confiável para execução de modelos at�
 - Nenhum modelo/componente foi baixado pelo Engine Manager durante os testes automatizados, que utilizam mocks. Inferência Qwen3 4B foi demonstrada manualmente pelo operador no LXC.
 
 Referências de API: [Ollama API](https://docs.ollama.com/api), [Biblioteca Ollama](https://ollama.com/library).
+
+
+## DevHub 0.1.2 — pesquisa online e planejamento de modelos
+
+Esta etapa adiciona **descoberta de metadados públicos**, sem criar assinaturas ou consumir APIs de inferência pagas. A busca online consulta diretamente a API pública oficial do Hugging Face; não equivale a pesquisar os tags instaláveis do Ollama. Não insira nomes de projetos confidenciais nas consultas: o termo é enviado ao provedor externo e fica salvo no catálogo SQLite privado.
+
+Comandos após atualizar a branch e executar novamente o instalador:
+
+```bash
+cd /root/software/devhub
+git fetch origin
+git switch feat/model-discovery-0.1.2
+bash install-system.sh --check
+bash install-system.sh --install
+devhub --version
+devhub models online "qwen coder" --limit 10
+devhub engines releases --engine ollama
+devhub models fit qwen2.5-coder:3b
+devhub models search coder
+devhub catalog
+devhub costs
+```
+
+- `models online`: consulta a API pública do Hugging Face e salva um snapshot no catálogo. Cada resultado traz ID, URL oficial, licença disponível, indicação de acesso restrito e pistas sobre GGUF; o resultado **não** constitui um tag Ollama e **não** libera instalação automática. Nenhum arquivo/modelo é baixado nessa operação.
+- `engines releases --engine ollama|llama.cpp|litellm|vllm`: consulta metadados da última *release* no GitHub oficial; não baixa nem atualiza o motor. A tag mais recente não significa compatibilidade ou estabilidade comprovada no LXC.
+- `models fit TAG`: estima a relação entre pesos do catálogo curado e VRAM livre, reservando 1 GiB para custos adicionais. Não comprova execução GPU. Use `--models-dir CAMINHO` apenas quando souber qual é o diretório de armazenamento acessível.
+- `devhub catalog`: mostra snapshots persistidos; pesquisas anteriores permanecem disponíveis localmente.
+- `models pull`: continua exigindo `--confirm-download --trust-local-endpoint` e somente aceita tags curados. Não é possível instalar diretamente um resultado do Hugging Face.
+
+O tráfego HTTPS de metadados utiliza somente `huggingface.co/api/models` e `api.github.com/repos/.../releases/latest`, com limite de tamanho, sem redirecionamento ou uso de credenciais. Um proxy corporativo exigido pela rede poderá impedir a consulta; nesse caso o catálogo offline continua funcional.
+
+Testes de desenvolvimento: **41/41 unitários**, sem integração externa ao vivo (internet indisponível no ambiente de testes). Nenhuma operação real de download, pagamento ou upgrade realizada. Os testes de integração com seu Rocky 9 ainda precisam de homologação.
+
+Fontes: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api e https://docs.ollama.com/api
