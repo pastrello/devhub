@@ -39,3 +39,12 @@ Testes locais: 41/41 unitários (Python 3.13.5), e `bash -n` dos instaladores; f
 Status: catálogo online **somente descoberta**, não instala automaticamente resultados do Hugging Face; a lista curada de tags Ollama permanece a única permitida para download. Verificações de VRAM/disco são aproximadas, sem benchmark de qualidade ou consumo real. Pesquisa na biblioteca web oficial do Ollama, downloads/atualizações de motores, dependências/licenças automatizadas e múltiplos workers com autenticação seguem pendentes.
 
 Segurança: nenhum recurso cloud pago ativado, nenhuma alteração no serviço Ollama existente, orçamento extra inicial US$ 0.
+
+
+## 0.1.3 — Oficial Ollama Registry Preflight (branch de trabalho)
+
+Implementado em `feat/registry-preflight-0.1.3`: `ollama_registry.py` com validação de tags locais, consulta pública read-only ao registry.ollama.ai, validação da estrutura de camadas e hashes SHA256, cálculo de tamanho dos blobs e estimativa de espaço em filesystem explicitamente informado. Adicionados comandos `devhub models preflight TAG --storage-path PATH` (guarda plano com validade de uma hora) e `devhub models install TAG --confirm-download --license-reviewed --trust-local-endpoint` (consulta de novo manifesto; rejeita mudança, orçamento de disco insuficiente, endpoint remoto, aprovação ausente ou tag divergente). Valida após download que o modelo aparece em Ollama /api/tags. Instalação dos novos componentes adaptada em `install.sh` e `install-system.sh`; versão 0.1.3.
+
+Validação: 15 testes de unidade do parser/preflight em ambiente Python local; testes adicionais de CLI versionados no GitHub para executar no CI. *Não* foi efetuado download real da API pública do registry neste ambiente e não há homologação real de 0.1.3 no LXC IA-01. O operador confirmou a versão 0.1.1 e a inferência GPU do Ollama. Consulta remota pode requerer autenticação do registry ou usar uma lista de manifestos não suportada pelo parser; o programa deve falhar fechado nessas situações.
+
+Ainda não implementado: descoberta web oficial completa de tags Ollama, conversão confiável HF -> Ollama, resolução multi-plataforma de manifestos, revisão automática de licença/arquivos/quantização, atualização administrativa de motores, workers remotos autenticados, controle de filas PostgreSQL e benchmarks comparativos. Nenhuma despesa adicional autorizada.
