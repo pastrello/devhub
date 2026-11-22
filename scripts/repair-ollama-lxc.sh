@@ -14,6 +14,24 @@ echo "Client version: $(/usr/bin/ollama --version 2>&1 || true)"
 for f in /usr/bin/ollama /usr/lib/ollama/llama-server; do
   if [[ -x "$f" ]]; then ls -lh "$f"; else echo "MISSING OR NOT EXECUTABLE: $f"; fi
 done
+echo 'Runtime path and permissions:'
+if command -v namei >/dev/null; then namei -l /usr/lib/ollama/llama-server || true; fi
+if command -v file >/dev/null; then file /usr/lib/ollama/llama-server || true; fi
+echo 'Service identity and namespace:'
+systemctl show ollama -p User -p MainPID -p RootDirectory -p RootImage -p ProtectSystem -p PrivateMounts --no-pager || true
+pid=$(systemctl show -p MainPID --value ollama 2>/dev/null || echo 0)
+if [[ $pid =~ ^[0-9]+$ && $pid -gt 0 ]]; then
+  ls -l "/proc/$pid/root/usr/lib/ollama/llama-server" 2>&1 || true
+fi
+accessible=false
+if id -u ollama >/dev/null 2>&1 && command -v runuser >/dev/null; then
+  if runuser -u ollama -- stat /usr/lib/ollama/llama-server >/dev/null 2>&1; then
+    accessible=true
+    echo 'Service user ollama CAN stat llama-server.'
+  else
+    echo 'WARNING: service user ollama CANNOT stat llama-server. Check ancestor directory x permissions and SELinux AVCs.' >&2
+  fi
+fi
 [[ $mode == --check ]] && exit 0
 [[ $EUID -eq 0 ]] || { echo 'Run --repair with root inside the LXC' >&2; exit 1; }
 [[ -f /etc/systemd/system/ollama.service ]] || { echo 'Expected DevHub lab systemd unit not found' >&2; exit 1; }
@@ -22,7 +40,12 @@ for cmd in curl tar zstd systemctl sha256sum; do
   command -v "$cmd" >/dev/null || { echo "Missing prerequisite: $cmd" >&2; exit 1; }
 done
 if [[ -x /usr/lib/ollama/llama-server ]]; then
-  echo 'Runtime already present; aborting no-op. If inference fails, inspect journalctl -u ollama.' >&2; exit 0
+  if [[ $accessible == false ]]; then
+    echo 'Existing file cannot be stat-ed by service user; do NOT replace it yet. Fix access to ancestor directories, then restart Ollama.' >&2
+    exit 2
+  fi
+  echo 'Runtime exists and service user can stat it. Check service namespace/SELinux and try systemctl restart ollama; no package files modified.' >&2
+  exit 2
 fi
 work=$(mktemp -d /var/tmp/devhub-ollama-repair.XXXXXXXX)
 backup=/var/backups/devhub-ollama-$(date -u +%Y%m%dT%H%M%SZ)
