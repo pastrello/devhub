@@ -32,8 +32,9 @@ if [[ $mode == --rollback ]]; then
   exit 0
 fi
 if ! id -u devhub >/dev/null 2>&1; then
-  useradd -r -m -d /var/lib/devhub -s /sbin/nologin devhub
+  useradd -r -U -m -d /var/lib/devhub -s /sbin/nologin devhub
 fi
+getent group devhub >/dev/null || { echo "Expected a dedicated devhub group." >&2; exit 1; }
 install -d -m 0755 "$base" "$base/releases"
 install -d -o devhub -g devhub -m 0700 /var/lib/devhub
 release="$base/releases/0.1.1-$(date -u +%Y%m%dT%H%M%SZ)-$$"
