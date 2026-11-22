@@ -58,3 +58,7 @@ bash -n install.sh
 13 testes unitários executados em Python 3.13.5, com mocks para inferência; sem teste em Rocky, GPU real ou contas comerciais. Estado SQLite em ~/.local/state/devhub (DEVHUB_STATE ou --state para alterar). Logs registram ação/status, não prompts. O comando discover grava um snapshot de inventário, não uma sincronização de catálogos públicos.
 
 Veja ARCHITECTURE.md, PROJECT-STATE.md, ROADMAP.md, SECURITY.md e AGENTS.md antes de contribuir.
+
+## Laboratório Proxmox VE 9 / Rocky Linux 9 LXC / RTX 3060 Ti
+
+Novo guia experimental: [docs/proxmox-rocky9-ollama.md](docs/proxmox-rocky9-ollama.md). Inclui bootstrap administrativo opcional de Ollama em [scripts/bootstrap-ollama-lxc.sh](scripts/bootstrap-ollama-lxc.sh), sem modificar drivers NVIDIA. Uso normal do DevHub permanece sem root. O bootstrap não foi executado no LXC real; confira as permissões dos dispositivos e teste a GPU com um modelo pequeno.
