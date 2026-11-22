@@ -7,3 +7,7 @@ Evidence: 13/13 unit tests passed in Python 3.13.5 in the development container;
 Not implemented: hardware detection, live catalog harvesting, automatic local model installs, provider onboarding, cloud CLI execution, paid budget accounting, benchmarks, intelligent routing, Git project access, portal, worker isolation, PostgreSQL, multi-agent scheduling.
 
 Next safe test: non-root installation on Rocky; doctor/discover; verify a known local Ollama tag with plan then run. Do not enable cloud until permissions, quotas and billing are verified. SQLite is temporary for PoC; PostgreSQL remains the distributed design target.
+
+## Laboratório GPU informado em 2026-11-22
+
+O operador informou Proxmox VE 9, LXC Rocky Linux 9 e RTX 3060 Ti 8 GB, driver NVIDIA 620.73.04. `nvidia-smi` funciona dentro do contêiner, mas inferência GPU ainda não foi homologada. Um bootstrap experimental de Ollama e guia foram propostos em branch `feat/lxc-rocky9-ollama-lab` (PR pendente de revisão/merge). Prioridade explicitada: DevHub Engine Manager deve descobrir e instalar motores, pesquisar/baixar modelos, inventariar hardware e gerenciar lifecycle sem exigir CLI manual. Root apenas para instalação de serviços; execução dos agentes e motores sem root. O bootstrap foi validado somente por bash -n em ambiente de desenvolvimento não-Rocky, sem download nem instalação real.
