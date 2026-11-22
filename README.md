@@ -62,3 +62,8 @@ Veja ARCHITECTURE.md, PROJECT-STATE.md, ROADMAP.md, SECURITY.md e AGENTS.md ante
 ## Laboratório Proxmox VE 9 / Rocky Linux 9 LXC / RTX 3060 Ti
 
 Novo guia experimental: [docs/proxmox-rocky9-ollama.md](docs/proxmox-rocky9-ollama.md). Inclui bootstrap administrativo opcional de Ollama em [scripts/bootstrap-ollama-lxc.sh](scripts/bootstrap-ollama-lxc.sh), sem modificar drivers NVIDIA. Uso normal do DevHub permanece sem root. O bootstrap não foi executado no LXC real; confira as permissões dos dispositivos e teste a GPU com um modelo pequeno.
+
+
+## Falha no laboratório: llama-server não encontrado
+
+Se `ollama run` reportar `llama-server binary not found`, não é necessário apagar o modelo. Na branch de laboratório, use `bash scripts/repair-ollama-lxc.sh --check`, confira `/usr/lib/ollama/llama-server` e, após snapshot, `bash scripts/repair-ollama-lxc.sh --repair`. O reparo só altera a instalação depois de verificar que o pacote oficial contém o runtime de inferência. Consulte [guia do laboratório](docs/proxmox-rocky9-ollama.md).
