@@ -22,3 +22,17 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Estimativa de requisitos baseada em variantes reais, contexto e hardware.
 - [ ] Benchmarks executados automaticamente com métricas válidas.
 - [ ] Controle remoto de outros workers, autenticação e isolamento distribuído.
+
+
+## 0.1.2 implemented / next
+
+- [x] Search public Hugging Face model metadata through official API (read-only).
+- [x] Read current release tags for Ollama/llama.cpp/vLLM/LiteLLM through official GitHub API.
+- [x] Persist discovery snapshots in existing SQLite registry.
+- [x] Evaluate known Ollama tags against currently free VRAM and optional available disk (estimates only).
+- [x] Deny automatic downloading of arbitrary discovered models and automatic engine upgrades.
+- [ ] Validate live HTTPS responses and installer in Rocky 9 LXC.
+- [ ] Search official Ollama library model/tag pages with a supported interface or vetted parser and provenance checks.
+- [ ] Verify exact artifact, license, quantization, RAM/VRAM and storage before automated installation.
+- [ ] Engine upgrade workflow with provenance, semantic compatibility, tested rollback and explicit administrator approval.
+- [ ] Add authenticated remote workers and agent management, benchmark metrics, PostgreSQL queue.

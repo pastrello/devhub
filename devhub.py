@@ -7,9 +7,10 @@ import shutil
 import sqlite3
 import sys
 import engine_manager as em
+import online_catalog as oc
 from urllib import request, error, parse
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
@@ -126,11 +127,14 @@ def configure_engine_parsers(sub):
     for name in ('list', 'status'):
         eng.add_parser(name)
     install = eng.add_parser('install'); install.add_argument('engine', choices=[e['id'] for e in em.ENGINES])
+    releases = eng.add_parser('releases'); releases.add_argument('--engine', choices=list(oc.ENGINE_REPOS), default='ollama')
 
     models = sub.add_parser('models', help='Search and manage Ollama models')
     mod = models.add_subparsers(dest='model_command', required=True)
     srch = mod.add_parser('search'); srch.add_argument('query', nargs='?', default=''); srch.add_argument('--task', choices=['general','reasoning','coding','vision'])
     rec = mod.add_parser('recommend'); rec.add_argument('--task', choices=['general','reasoning','coding','vision'], default='coding')
+    online = mod.add_parser('online'); online.add_argument('query'); online.add_argument('--limit', type=int, default=10)
+    fit = mod.add_parser('fit'); fit.add_argument('model'); fit.add_argument('--models-dir')
     for name in ('installed', 'running'):
         mod.add_parser(name)
     show = mod.add_parser('inspect'); show.add_argument('model')
@@ -140,10 +144,17 @@ def configure_engine_parsers(sub):
     sub.add_parser('gpu', help='Inspect GPUs without privileged changes')
 
 
-def manage(a, ollama):
+def manage(a, ollama, state):
     if a.cmd == 'gpu':
         return em.gpu_inventory()
     if a.cmd == 'engines':
+        if a.engine_command == 'releases':
+            result = oc.official_engine_release(a.engine)
+            if a.engine == 'ollama':
+                try: result['installed_version'] = ollama.version()
+                except (OSError, ValueError, KeyError, TypeError): result['installed_version'] = 'unknown'
+            state.save('official-release:' + a.engine, result)
+            return result
         if a.engine_command in ('list', 'status'):
             return {'engines': em.engines_catalog(ollama if a.engine_command == 'status' else None)}
         if a.engine != 'ollama':
@@ -153,6 +164,27 @@ def manage(a, ollama):
                                  'bash scripts/bootstrap-ollama-lxc.sh --check',
                                  'sudo bash scripts/bootstrap-ollama-lxc.sh --install'],
                 'note': 'Commands are guidance only; nothing executed'}
+    if a.model_command == 'online':
+        result = oc.search_huggingface(a.query, a.limit)
+        state.save('huggingface:' + a.query.casefold().strip(), result)
+        return result
+    if a.model_command == 'fit':
+        if not em.valid_local_tag(a.model):
+            raise Blocked('Only known, curated Ollama tags can be evaluated')
+        match = next((m for m in em.MODELS if m['tag'] == a.model), None)
+        if match is None: raise Blocked('Model not in curated compatibility catalog')
+        gpu = em.gpu_inventory()
+        eligible = []
+        for g in gpu['gpus']:
+            available = round(g['memory_free_mib'] / 1024, 2)
+            reserve = 1.0
+            eligible.append({'gpu': g['name'], 'available_gib': available,
+                             'minimum_reserve_gib': reserve,
+                             'fit_by_weights_only': match['weights_gib'] + reserve <= available})
+        return {'model': a.model, 'weights_gib_estimate': match['weights_gib'],
+                'gpu': eligible, 'disk': em.estimated_download_check(a.model, a.models_dir),
+                'status': 'estimate_only',
+                'warning': 'No runtime/context/KV-cache benchmark. Some weights may run on CPU; estimate is not a fit guarantee.'}
     if a.model_command in ('search', 'recommend'):
         try:
             installed = [m['name'] for m in ollama.inventory()]
@@ -236,7 +268,7 @@ def main(argv=None):
         elif a.cmd == 'catalog': out = state.catalog()
         elif a.cmd == 'costs': out = state.costs()
         elif a.cmd in ('engines', 'models', 'gpu'):
-            out = manage(a, ollama)
+            out = manage(a, ollama, state)
         elif a.cmd == 'pull':
             if not a.confirm_download or not a.trust_local_endpoint:
                 raise Blocked('Both --confirm-download and --trust-local-endpoint are required')
@@ -253,9 +285,9 @@ def main(argv=None):
         state.event(action, out.get('status','ok'))
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0 if out.get('status') not in ('blocked','review') else 2
-    except (OSError, ValueError, KeyError, TypeError, Blocked) as exc:
+    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError) as exc:
         state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
-        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, Blocked) else type(exc).__name__}), file=sys.stderr)
+        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError)) else type(exc).__name__}), file=sys.stderr)
         return 2
     finally:
         state.db.close()

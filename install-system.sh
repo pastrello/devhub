@@ -6,7 +6,7 @@ umask 077
 mode=$1
 case "$mode" in --check|--install|--rollback) ;; *) exit 2 ;; esac
 cd -- "$(dirname -- "$0")"
-[[ -f devhub.py && -f engine_manager.py ]] || { echo 'Missing DevHub sources' >&2; exit 1; }
+[[ -f devhub.py && -f engine_manager.py && -f online_catalog.py ]] || { echo 'Missing DevHub sources' >&2; exit 1; }
 command -v python3.12 >/dev/null || { echo 'Python 3.12 required. Install from Rocky Linux package repositories.' >&2; exit 1; }
 python3.12 -c 'import sys; assert sys.version_info >= (3,12)'
 if [[ $mode == --check ]]; then
@@ -37,9 +37,9 @@ fi
 getent group devhub >/dev/null || { echo "Expected a dedicated devhub group." >&2; exit 1; }
 install -d -m 0755 "$base" "$base/releases"
 install -d -o devhub -g devhub -m 0700 /var/lib/devhub
-release="$base/releases/0.1.1-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+release="$base/releases/0.1.2-$(date -u +%Y%m%dT%H%M%SZ)-$$"
 install -d -m 0755 "$release"
-install -m 0644 devhub.py engine_manager.py "$release/"
+install -m 0644 devhub.py engine_manager.py online_catalog.py "$release/"
 # Keep the previous live release addressable for rollback.
 if [[ -L $current ]]; then
   target=$(readlink -f "$current")
