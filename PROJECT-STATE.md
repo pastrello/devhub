@@ -16,3 +16,7 @@ O operador informou Proxmox VE 9, LXC Rocky Linux 9 e RTX 3060 Ti 8 GB, driver N
 ## Incidente de homologação de inferência — 2026-11-22
 
 O operador executou `bootstrap-ollama-lxc.sh --install` com serviço systemd ativo e download `qwen3:4b` bem-sucedido; a inferência devolveu HTTP 500 com `llama-server binary not found`. Causa imediata confirmada pelo erro: runtime não localizado nos caminhos esperados. A razão exata (pacote upstream incompleto versus extração/localização) ainda não foi comprovada. Corrigido o bootstrap para validar também `/usr/lib/ollama/llama-server`; criado reparo com download em staging e backup/rollback. Requer testes reais antes de merge. Nenhuma evidência de inferência GPU bem-sucedida ainda.
+
+## Homologação inferência GPU — 2026-11-22
+
+Operador confirmou `ollama run qwen3:4b` com resposta OK e `ollama ps` com `100% GPU`, runner `llamacpp`, contexto `4096`, consumo ~3.2 GB. NVIDIA RTX 3060 Ti reportou 3207/8192 MiB de VRAM. Primeiro teste de inferência GPU **APROVADO no laboratório IA-01**. Ainda não comprovamos causa raiz ou ação exata que eliminou erro anterior de `llama-server` nem a execução do CLI DevHub como usuário não-root. Evidência: `docs/evidence/2026-11-22-ia01-qwen3-gpu.md`. Manter PR #1 em draft até validação de instalador/segurança; não confundir inferência Ollama bem-sucedida com conclusão do Engine Manager.
