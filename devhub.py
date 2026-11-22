@@ -6,9 +6,10 @@ from pathlib import Path
 import shutil
 import sqlite3
 import sys
+import engine_manager as em
 from urllib import request, error, parse
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
@@ -22,34 +23,53 @@ class NoRedirect(request.HTTPRedirectHandler):
 class HTTP:
     def __init__(self, base):
         u = parse.urlsplit(base)
-        if u.scheme not in ('http', 'https') or not u.hostname or u.username or u.password or u.query or u.fragment:
-            raise Blocked('Invalid endpoint; credentials in URL forbidden')
+        if (u.scheme not in ('http', 'https') or not u.hostname or u.username or u.password
+                or u.query or u.fragment or u.path not in ('', '/') or u.port == 0):
+            raise Blocked('Invalid endpoint; credentials, paths and query strings in URL forbidden')
         self.base = base.rstrip('/')
         self.client = request.build_opener(request.ProxyHandler({}), NoRedirect())
 
-    def call(self, path, payload=None, timeout=15):
+    def call(self, path, payload=None, timeout=15, method=None):
+        if not path.startswith('/') or '://' in path:
+            raise Blocked('Invalid API path')
         data = None if payload is None else json.dumps(payload).encode()
-        req = request.Request(self.base + path, data=data, headers={'Content-Type': 'application/json'})
+        req = request.Request(self.base + path, data=data, method=method,
+                              headers={'Content-Type': 'application/json'})
         with self.client.open(req, timeout=timeout) as res:
             raw = res.read(16 * 1024 * 1024 + 1)
         if len(raw) > 16 * 1024 * 1024:
             raise Blocked('Response too large')
-        return json.loads(raw)
+        return json.loads(raw) if raw else {}
 
 class Ollama:
     def __init__(self, base):
         self.http = HTTP(base)
 
+    def version(self):
+        return self.http.call('/api/version').get('version', 'unknown')
+
     def inventory(self):
         return [m for m in self.http.call('/api/tags')['models'] if isinstance(m.get('name'), str)]
 
-    def generate(self, model, prompt):
-        return self.http.call('/api/generate', {'model': model, 'prompt': prompt, 'stream': False, 'options': {'num_predict': 1024}}, timeout=180)['response']
+    def running(self):
+        return self.http.call('/api/ps').get('models', [])
+
+    def inspect(self, name):
+        return self.http.call('/api/show', {'model': name})
+
+    def generate(self, model, prompt, num_predict=1024):
+        return self.http.call('/api/generate', {'model': model, 'prompt': prompt, 'stream': False,
+                                               'options': {'num_predict': num_predict}}, timeout=180)['response']
 
     def pull(self, model):
-        if not model or '/' in model or 'cloud' in model.lower() or len(model) > 128:
-            raise Blocked('Only explicit, ordinary local catalog tags are supported in 0.1')
+        if not em.valid_local_tag(model):
+            raise Blocked('Invalid or cloud-tagged local model')
         return self.http.call('/api/pull', {'model': model, 'stream': False}, timeout=900)
+
+    def delete(self, model):
+        if not em.valid_local_tag(model):
+            raise Blocked('Invalid or cloud-tagged local model')
+        return self.http.call('/api/delete', {'model': model}, method='DELETE', timeout=45)
 
 def local_candidate(name):
     # Conservative: only operator-approved tags, never automatically trust discovery.
@@ -90,7 +110,7 @@ class State:
 def discover(ollama, gateway=None):
     result = {'cli': {k: {'installed': bool(shutil.which(v)), 'authenticated': 'unknown', 'execution': 'blocked'} for k,v in CLI.items()}, 'cloud': {k: 'disabled' for k in CLOUD}, 'ollama': {'status': 'unavailable', 'models': []}, 'litellm': {'status': 'not configured'}}
     try:
-        result['ollama'] = {'status': 'reachable', 'models': ollama.inventory()}
+        result['ollama'] = {'status': 'reachable', 'version': ollama.version(), 'models': ollama.inventory()}
     except (OSError, ValueError, KeyError, TypeError, Blocked):
         pass
     if gateway:
@@ -99,6 +119,95 @@ def discover(ollama, gateway=None):
         except (OSError, ValueError, KeyError, TypeError, Blocked):
             result['litellm'] = {'status': 'unavailable', 'execution': 'blocked'}
     return result
+
+def configure_engine_parsers(sub):
+    engines = sub.add_parser('engines', help='Discover inference runtimes and installation instructions')
+    eng = engines.add_subparsers(dest='engine_command', required=True)
+    for name in ('list', 'status'):
+        eng.add_parser(name)
+    install = eng.add_parser('install'); install.add_argument('engine', choices=[e['id'] for e in em.ENGINES])
+
+    models = sub.add_parser('models', help='Search and manage Ollama models')
+    mod = models.add_subparsers(dest='model_command', required=True)
+    srch = mod.add_parser('search'); srch.add_argument('query', nargs='?', default=''); srch.add_argument('--task', choices=['general','reasoning','coding','vision'])
+    rec = mod.add_parser('recommend'); rec.add_argument('--task', choices=['general','reasoning','coding','vision'], default='coding')
+    for name in ('installed', 'running'):
+        mod.add_parser(name)
+    show = mod.add_parser('inspect'); show.add_argument('model')
+    pull = mod.add_parser('pull'); pull.add_argument('model'); pull.add_argument('--confirm-download', action='store_true'); pull.add_argument('--trust-local-endpoint', action='store_true'); pull.add_argument('--models-dir')
+    delete = mod.add_parser('delete'); delete.add_argument('model'); delete.add_argument('--confirm-delete', action='store_true'); delete.add_argument('--trust-local-endpoint', action='store_true')
+    test = mod.add_parser('test'); test.add_argument('model'); test.add_argument('--trust-local-endpoint', action='store_true')
+    sub.add_parser('gpu', help='Inspect GPUs without privileged changes')
+
+
+def manage(a, ollama):
+    if a.cmd == 'gpu':
+        return em.gpu_inventory()
+    if a.cmd == 'engines':
+        if a.engine_command in ('list', 'status'):
+            return {'engines': em.engines_catalog(ollama if a.engine_command == 'status' else None)}
+        if a.engine != 'ollama':
+            return {'status': 'planned', 'engine': a.engine, 'reason': 'Install adapter not yet homologated; no changes made'}
+        return {'status': 'manual-approval-required', 'engine': 'ollama',
+                'instructions': ['Review docs/proxmox-rocky9-ollama.md',
+                                 'bash scripts/bootstrap-ollama-lxc.sh --check',
+                                 'sudo bash scripts/bootstrap-ollama-lxc.sh --install'],
+                'note': 'Commands are guidance only; nothing executed'}
+    if a.model_command in ('search', 'recommend'):
+        try:
+            installed = [m['name'] for m in ollama.inventory()]
+        except (OSError, ValueError, KeyError, TypeError, Blocked):
+            installed = []
+        gpus = em.gpu_inventory()['gpus']
+        max_vram = max((g['memory_total_mib'] for g in gpus), default=None)
+        if a.model_command == 'search':
+            matches = em.search_models(a.query, a.task, max_vram, installed)
+        else:
+            matches = em.search_models(task=a.task, vram_mib=max_vram, installed=installed)
+        return {'catalog': 'built-in curated snapshot; not live internet search', 'gpu_vram_mib': max_vram,
+                'models': matches, 'note': 'Weights size alone does not guarantee GPU fit; verify license/quantization/disk/context'}
+    if a.model_command == 'installed':
+        return {'models': ollama.inventory()}
+    if a.model_command == 'running':
+        return {'models': ollama.running()}
+    if not em.valid_local_tag(a.model):
+        raise Blocked('Use a valid explicit local model tag (no cloud or namespace)')
+    if a.model_command == 'inspect':
+        obj = ollama.inspect(a.model)
+        return {'model': a.model, 'details': obj.get('details'), 'parameters': obj.get('parameters'), 'modified_at': obj.get('modified_at')}
+    if not a.trust_local_endpoint:
+        raise Blocked('Confirm the Ollama endpoint is a local, non-cloud runtime using --trust-local-endpoint')
+    if a.model_command == 'pull':
+        if not a.confirm_download:
+            raise Blocked('Explicit --confirm-download required')
+        if a.model not in [m['tag'] for m in em.MODELS]:
+            raise Blocked('In 0.1.1, model must be in curated local catalog; see devhub models search')
+        space = em.estimated_download_check(a.model, a.models_dir)
+        if space['space'] == 'insufficient_estimate':
+            raise Blocked('Disk space below conservative weights estimate')
+        out = ollama.pull(a.model)
+        if out.get('status') != 'success':
+            raise Blocked('Download not confirmed by Ollama')
+        return {'status':'success', 'model':a.model, 'space_estimate':space}
+    if a.model_command == 'delete':
+        if not a.confirm_delete:
+            raise Blocked('Explicit --confirm-delete required')
+        if a.model not in [m['name'] for m in ollama.inventory()]:
+            raise Blocked('Model must exist on selected Ollama endpoint before deletion')
+        ollama.delete(a.model)
+        return {'status':'success','deleted':a.model}
+    if a.model_command == 'test':
+        if a.model not in [m['name'] for m in ollama.inventory()]:
+            raise Blocked('Model must be installed before test')
+        response = ollama.generate(a.model, 'Responda somente OK.', num_predict=32)
+        running = ollama.running()
+        model_stat = next((m for m in running if m.get('name') == a.model), {})
+        return {'status':'ok', 'model':a.model, 'response_preview':response[:300],
+                'runner_size_vram_bytes': model_stat.get('size_vram'),
+                'gpu_probe':em.gpu_inventory(),
+                'note':'An API reply proves inference only. Verify real GPU offload with ollama ps / nvidia-smi.'}
+    raise Blocked('Unknown model command')
+
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog='devhub')
@@ -110,21 +219,27 @@ def main(argv=None):
     s = p.add_subparsers(dest='cmd', required=True)
     for cmd in ('doctor','discover','catalog','costs'):
         s.add_parser(cmd)
-    pull = s.add_parser('pull'); pull.add_argument('model'); pull.add_argument('--confirm-download', action='store_true')
+    pull = s.add_parser('pull'); pull.add_argument('model'); pull.add_argument('--confirm-download', action='store_true'); pull.add_argument('--trust-local-endpoint', action='store_true')
     for cmd in ('plan','run'):
         t = s.add_parser(cmd); t.add_argument('prompt'); t.add_argument('--provider', choices=['auto','ollama','litellm',*CLI,*CLOUD], default='auto'); t.add_argument('--complexity', choices=['simple','advanced'], default='simple'); t.add_argument('--trust-local-endpoint', action='store_true')
+    configure_engine_parsers(s)
     a = p.parse_args(argv)
     os.umask(0o077)
     state = State(Path(a.state))
+    action = a.cmd + ('.' + (getattr(a, 'engine_command', None) or getattr(a, 'model_command', None)) if a.cmd in ('engines','models') else '')
     try:
         ollama = Ollama(a.ollama)
         if a.cmd in ('doctor','discover'):
             out = discover(ollama, a.litellm)
+            if a.cmd == 'doctor': out['gpu'] = em.gpu_inventory()
             if a.cmd == 'discover': state.save('discovery', out)
         elif a.cmd == 'catalog': out = state.catalog()
         elif a.cmd == 'costs': out = state.costs()
+        elif a.cmd in ('engines', 'models', 'gpu'):
+            out = manage(a, ollama)
         elif a.cmd == 'pull':
-            if not a.confirm_download: raise Blocked('Explicit --confirm-download required')
+            if not a.confirm_download or not a.trust_local_endpoint:
+                raise Blocked('Both --confirm-download and --trust-local-endpoint are required')
             out = ollama.pull(a.model)
             if out.get('status') != 'success': raise Blocked('Download not confirmed')
         else:
@@ -135,12 +250,11 @@ def main(argv=None):
                 if out['status'] != 'ready': raise Blocked(out['reason'])
                 if not a.trust_local_endpoint: raise Blocked('Confirm endpoint only performs local inference with --trust-local-endpoint')
                 out['response'] = ollama.generate(out['model'], a.prompt)
-        state.event(a.cmd, out.get('status','ok'))
+        state.event(action, out.get('status','ok'))
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0 if out.get('status') not in ('blocked','review') else 2
     except (OSError, ValueError, KeyError, TypeError, Blocked) as exc:
-        state.event(a.cmd, 'blocked' if isinstance(exc, Blocked) else 'error')
-        # Do not disclose prompts, HTTP bodies, environment or credentials in logs.
+        state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
         print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, Blocked) else type(exc).__name__}), file=sys.stderr)
         return 2
     finally:
