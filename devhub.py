@@ -329,7 +329,8 @@ def wizard(ollama, state):
     print('DevHub 0.1.4 | Assistente de motores locais')
     print('Operacoes pagas e instalacao automatica sem confirmacao permanecem desativadas.')
     while True:
-        print('\\n[1] GPU e worker local [2] Modelos instalados [3] Encontrar modelos')
+        print()
+        print('[1] GPU e worker local [2] Modelos instalados [3] Encontrar modelos')
         print('[4] Preparar download (nao instala) [5] Testar modelo local [0] Sair')
         try:
             choice = input('Escolha: ').strip()
