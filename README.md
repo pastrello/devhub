@@ -237,3 +237,52 @@ devhub catalog
 **Segurança:** benchmark restringe-se a um endpoint Ollama de loopback e exige `--trust-local-endpoint`; servidores remotos requerem controle de acesso futuro. Não armazene prompts confidenciais nos argumentos nem permita API do Ollama exposta na Internet. O benchmark não registra valores brutos de prompt do usuário.
 
 Referência: https://docs.ollama.com/api/generate e https://docs.ollama.com/api/ps .
+
+
+## 0.1.5 — Registro passivo de workers (branch de laboratório)
+
+A nova versão permite armazenar **inventários** de outros LXCs ou máquinas sem conceder acesso remoto a nenhum deles. Não há SSH, API de agente, heartbeat automático, chave ou credencial: **apenas metadados**. Os registros podem ser importados manualmente e nunca autorizam execução de tarefas ou downloads em outro host.
+
+No IA-01, após atualizar para `feat/worker-registry-0.1.5` e rodar novamente `bash install-system.sh --install`, o CLI deverá informar `devhub --version = 0.1.5`.
+
+### Worker local
+
+```bash
+devhub workers local
+devhub workers snapshot --id ia-01
+devhub workers enroll-local --id ia-01 --confirm-enroll
+devhub workers list
+devhub workers show ia-01
+```
+
+O ID é uma etiqueta definida pelo operador, usando letras minúsculas, números e hífens. O `snapshot` apenas imprime JSON e não registra o worker. `enroll-local` coleta uma foto do estado e registra o metadado no SQLite do DevHub. Para substituir um registro existente, acrescente `--replace` conscientemente.
+
+### Outro LXC sem rede de administração
+
+No outro host que tenha DevHub instalado, gere um snapshot:
+
+```bash
+devhub workers snapshot --id ia-02 > /tmp/ia-02.json
+```
+
+Transfira o JSON pelo método administrativo que você já usa e, no IA-01:
+
+```bash
+devhub workers import-file /CAMINHO/ia-02.json --confirm-import
+devhub workers list
+devhub workers show ia-02
+```
+
+O arquivo pode conter hostname, plataforma, nome/versão do motor, tags de modelos e dados de GPU; **não** contém endereço IP de agente, tokens ou chave. Isso não autentica a origem: um JSON copiado pode ser falso. Trate como informação informada pelo operador, nunca como heartbeat ou worker remoto confiável.
+
+Snapshots com mais de **15 minutos** serão apresentados como `stale_snapshot` e não serão atualizados automaticamente. Registros estão limitados em tamanho e validação de campos. A importação rejeita campos extras (como `endpoint`, `token` e `command`), nomes inválidos, arquivos grandes e links simbólicos.
+
+Para apagar apenas o registro local:
+
+```bash
+devhub workers forget ia-02 --confirm-forget
+```
+
+Isso **não** toca no host de origem e não remove modelos. O próximo passo será estabelecer identidade e comunicação autenticada entre workers, em uma implementação independente e auditável.
+
+Teste de regressão: `python3.12 -m unittest discover -s tests -v`. O novo módulo possui 16 testes de segurança e operações; GitHub Actions e a execução real da versão 0.1.5 no LXC ainda precisam ser verificados.
