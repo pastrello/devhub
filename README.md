@@ -199,3 +199,41 @@ A instalação reconsulta o manifesto, bloqueia se o hash mudou, verifica o espa
 Nenhuma compra, login, integração cloud paga, atualização do Ollama ou instalação em outros contêineres é realizada automaticamente.
 
 Referências: https://registry.ollama.ai/ , https://docs.ollama.com/api/pull , https://docs.ollama.com/api/tags .
+
+
+## DevHub 0.1.4 — assistente interativo, worker local e benchmark
+
+Versão de laboratório. O Ollama Qwen2.5-Coder 3B foi testado pelo operador no IA-01 com resposta OK e `runner_size_vram_bytes=2163568803` no retorno de teste, GPU NVIDIA 3060 Ti 8 GiB. A consulta `models running` posterior estava vazia, o que **não é erro**: segundo o Ollama os modelos são descarregados quando seu `keep_alive` expira (padrão de 5 min). A medição anterior **não garante** permanência do modelo nem 100% de offload, pois relata apenas memória associada ao runner.
+
+### Atualização em IA-01
+
+```bash
+cd /root/software/devhub
+git fetch origin
+git switch feat/local-worker-benchmark-0.1.4
+bash install-system.sh --check
+bash install-system.sh --install
+devhub --version
+```
+
+Comandos novos:
+
+```bash
+devhub wizard
+devhub workers local
+devhub models benchmark qwen2.5-coder:3b --trust-local-endpoint --keep-alive 5m
+devhub models running
+devhub catalog
+```
+
+`wizard` abre um menu interativo português: inventário, modelos instalados, pesquisa no catálogo interno, pré-verificação de um modelo e teste explicitamente confirmado. Ele não executa automaticamente downloads, instala motores ou ativa nuvem. O CLI continua a interface principal para homologação, e uma interface web vem depois.
+
+`workers local` gera snapshot local de hostname, arquitetura, GPU, motor e modelos. **Não** abre porta, não registra outro LXC e não distribui tarefas.
+
+`models benchmark` executa **um teste curto** com prompt fixo sobre índices SQL, contexto de 4096, até 64 tokens de resposta, `keep_alive` finito permitido (`0`, `1m`, `5m`, `10m`) e consulta imediatamente `/api/ps`. O relatório inclui tempos de carregamento e geração, velocidade aproximada em tokens/s, memória de GPU, prazo de expiração quando informado e inventário de GPU. O resultado fica salvo no SQLite em `benchmark:<tag>`. Não é comparação estatisticamente válida entre modelos, pois não faz aquecimento/repetições independentes nem controla cargas concorrentes.
+
+`models running` pode estar vazio se o modelo foi descarregado, mesmo após teste bem-sucedido. Para verificar um modelo sem esperar, execute imediatamente após `benchmark`.
+
+**Segurança:** benchmark restringe-se a um endpoint Ollama de loopback e exige `--trust-local-endpoint`; servidores remotos requerem controle de acesso futuro. Não armazene prompts confidenciais nos argumentos nem permita API do Ollama exposta na Internet. O benchmark não registra valores brutos de prompt do usuário.
+
+Referência: https://docs.ollama.com/api/generate e https://docs.ollama.com/api/ps .

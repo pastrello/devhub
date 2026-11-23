@@ -9,11 +9,12 @@ import sys
 import engine_manager as em
 import online_catalog as oc
 import ollama_registry as rg
+import local_worker as lw
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlsplit
 from urllib import request, error, parse
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
@@ -64,6 +65,14 @@ class Ollama:
     def generate(self, model, prompt, num_predict=1024):
         return self.http.call('/api/generate', {'model': model, 'prompt': prompt, 'stream': False,
                                                'options': {'num_predict': num_predict}}, timeout=180)['response']
+
+    def generate_report(self, model, prompt, *, keep_alive='5m', max_tokens=64):
+        if keep_alive not in lw.KEEP_ALIVE or max_tokens not in lw.MAX_TOKENS:
+            raise Blocked('Benchmark limits invalid')
+        return self.http.call('/api/generate', {'model': model, 'prompt': prompt, 'stream': False,
+                                               'keep_alive': keep_alive,
+                                               'options': {'num_predict': max_tokens, 'num_ctx': 4096}},
+                              timeout=180)
 
     def pull(self, model):
         if not em.valid_local_tag(model):
@@ -154,12 +163,24 @@ def configure_engine_parsers(sub):
     pull = mod.add_parser('pull'); pull.add_argument('model'); pull.add_argument('--confirm-download', action='store_true'); pull.add_argument('--trust-local-endpoint', action='store_true'); pull.add_argument('--models-dir')
     delete = mod.add_parser('delete'); delete.add_argument('model'); delete.add_argument('--confirm-delete', action='store_true'); delete.add_argument('--trust-local-endpoint', action='store_true')
     test = mod.add_parser('test'); test.add_argument('model'); test.add_argument('--trust-local-endpoint', action='store_true')
+    bench = mod.add_parser('benchmark'); bench.add_argument('model')
+    bench.add_argument('--trust-local-endpoint', action='store_true')
+    bench.add_argument('--keep-alive', choices=list(lw.KEEP_ALIVE), default='5m')
+    bench.add_argument('--max-tokens', type=int, choices=list(lw.MAX_TOKENS), default=64)
     sub.add_parser('gpu', help='Inspect GPUs without privileged changes')
+    workers = sub.add_parser('workers', help='Inspect workers (local only in 0.1.4)')
+    wsub = workers.add_subparsers(dest='worker_command', required=True)
+    wsub.add_parser('local')
+    sub.add_parser('wizard', help='Interactive read-first walkthrough for local engines/models')
 
 
 def manage(a, ollama, state):
     if a.cmd == 'gpu':
         return em.gpu_inventory()
+    if a.cmd == 'workers':
+        return lw.local_worker(ollama, em.gpu_inventory)
+    if a.cmd == 'wizard':
+        return wizard(ollama, state)
     if a.cmd == 'engines':
         if a.engine_command == 'releases':
             result = oc.official_engine_release(a.engine)
@@ -278,6 +299,16 @@ def manage(a, ollama, state):
             raise Blocked('Model must exist on selected Ollama endpoint before deletion')
         ollama.delete(a.model)
         return {'status':'success','deleted':a.model}
+    if a.model_command == 'benchmark':
+        if not a.trust_local_endpoint:
+            raise Blocked('Explicit --trust-local-endpoint required for benchmark')
+        endpoint = urlsplit(ollama.http.base)
+        if endpoint.hostname not in ('127.0.0.1', 'localhost', '::1'):
+            raise Blocked('Benchmarks require a locally verified Ollama endpoint in this version')
+        result = lw.benchmark(ollama, a.model, em.gpu_inventory,
+                              keep_alive=a.keep_alive, max_tokens=a.max_tokens)
+        state.save('benchmark:' + a.model, result)
+        return result
     if a.model_command == 'test':
         if a.model not in [m['name'] for m in ollama.inventory()]:
             raise Blocked('Model must be installed before test')
@@ -290,6 +321,70 @@ def manage(a, ollama, state):
                 'note':'An API reply proves inference only. Verify real GPU offload with ollama ps / nvidia-smi.'}
     raise Blocked('Unknown model command')
 
+
+def wizard(ollama, state):
+    """Read-mostly interactive assistant; no implicit downloading or paid inference."""
+    if not sys.stdin.isatty():
+        raise Blocked('wizard requires an interactive terminal')
+    print('DevHub 0.1.4 | Assistente de motores locais')
+    print('Operacoes pagas e instalacao automatica sem confirmacao permanecem desativadas.')
+    while True:
+        print()
+        print('[1] GPU e worker local [2] Modelos instalados [3] Encontrar modelos')
+        print('[4] Preparar download (nao instala) [5] Testar modelo local [0] Sair')
+        try:
+            choice = input('Escolha: ').strip()
+        except (EOFError, KeyboardInterrupt):
+            return {'status': 'cancelled'}
+        if choice == '0':
+            return {'status': 'finished'}
+        if choice == '1':
+            print(json.dumps(lw.local_worker(ollama, em.gpu_inventory), indent=2, ensure_ascii=False))
+        elif choice == '2':
+            try:
+                print(json.dumps(ollama.inventory(), indent=2, ensure_ascii=False))
+            except (OSError, ValueError, KeyError, TypeError):
+                print('Ollama indisponivel neste momento.')
+        elif choice == '3':
+            q = input('Procure modelos do catalogo local (nome ou tarefa): ').strip()
+            print(json.dumps(em.search_models(q), indent=2, ensure_ascii=False))
+            print('Busca oficial online separada: devhub models online "consulta"')
+        elif choice == '4':
+            tag = input('Modelo local exato (ex. qwen2.5-coder:3b): ').strip()
+            storage = input('Diretorio para verificar espaco livre (ex. /var/lib): ').strip()
+            if not rg.valid_tag(tag):
+                print('Modelo invalido; operacao cancelada.')
+                continue
+            try:
+                result = rg.preflight(tag, storage)
+                result['ollama_endpoint'] = ollama.http.base
+                state.save('pull-plan:' + tag, result)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                print('Para instalar após revisar a licença:')
+                print('devhub models install ' + tag +
+                      ' --confirm-download --license-reviewed --trust-local-endpoint')
+                print('Nenhum download foi iniciado.')
+            except (OSError, ValueError, rg.RegistryError) as ex:
+                print('Falha no preflight: ' + (str(ex) if isinstance(ex, rg.RegistryError) else type(ex).__name__))
+        elif choice == '5':
+            model = input('Tag do modelo instalado: ').strip()
+            if not lw.MODEL.fullmatch(model) or 'cloud' in model.lower():
+                print('Modelo invalido.')
+                continue
+            if input('Confirma Ollama LOCAL e teste na GPU? Digite SIM: ').strip() != 'SIM':
+                print('Cancelado.')
+                continue
+            if urlsplit(ollama.http.base).hostname not in ('localhost','127.0.0.1','::1'):
+                print('Teste remoto bloqueado.')
+                continue
+            try:
+                result = lw.benchmark(ollama, model, em.gpu_inventory, keep_alive='5m')
+                state.save('benchmark:' + model, result)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            except (OSError, ValueError, KeyError, TypeError, lw.WorkerError) as ex:
+                print('Falha no teste: ' + (str(ex) if isinstance(ex, lw.WorkerError) else type(ex).__name__))
+        else:
+            print('Opcao desconhecida.')
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog='devhub')
@@ -317,7 +412,7 @@ def main(argv=None):
             if a.cmd == 'discover': state.save('discovery', out)
         elif a.cmd == 'catalog': out = state.catalog()
         elif a.cmd == 'costs': out = state.costs()
-        elif a.cmd in ('engines', 'models', 'gpu'):
+        elif a.cmd in ('engines', 'models', 'gpu', 'workers', 'wizard'):
             out = manage(a, ollama, state)
         elif a.cmd == 'pull':
             if not a.confirm_download or not a.trust_local_endpoint:
@@ -335,9 +430,9 @@ def main(argv=None):
         state.event(action, out.get('status','ok'))
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0 if out.get('status') not in ('blocked','review') else 2
-    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError) as exc:
         state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
-        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError)) else type(exc).__name__}), file=sys.stderr)
+        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError)) else type(exc).__name__}), file=sys.stderr)
         return 2
     finally:
         state.db.close()

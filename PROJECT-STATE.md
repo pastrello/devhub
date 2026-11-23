@@ -48,3 +48,16 @@ Implementado em `feat/registry-preflight-0.1.3`: `ollama_registry.py` com valida
 Validação: 15 testes de unidade do parser/preflight em ambiente Python local; testes adicionais de CLI versionados no GitHub para executar no CI. *Não* foi efetuado download real da API pública do registry neste ambiente e não há homologação real de 0.1.3 no LXC IA-01. O operador confirmou a versão 0.1.1 e a inferência GPU do Ollama. Consulta remota pode requerer autenticação do registry ou usar uma lista de manifestos não suportada pelo parser; o programa deve falhar fechado nessas situações.
 
 Ainda não implementado: descoberta web oficial completa de tags Ollama, conversão confiável HF -> Ollama, resolução multi-plataforma de manifestos, revisão automática de licença/arquivos/quantização, atualização administrativa de motores, workers remotos autenticados, controle de filas PostgreSQL e benchmarks comparativos. Nenhuma despesa adicional autorizada.
+
+
+## 0.1.4 — Worker local, benchmark e wizard
+
+Operador confirmou no IA-01 `devhub models test qwen2.5-coder:3b --trust-local-endpoint` com `status:ok`, resposta `OK`, `runner_size_vram_bytes:2163568803`, RTX 3060 Ti 8192 MiB (5615 MiB livres durante snapshot); `models running` e `ollama ps` estavam vazios na observação posterior. Isso confirma inferência local e telemetria parcial; a lista vazia é compatível com unload por `keep_alive`, sem causa exata demonstrada. Não se deve classificar esta segunda observação como falha GPU. A primeira inferência GPU comprovada com `100% GPU` foi Qwen3 4B.
+
+Implementada em `feat/local-worker-benchmark-0.1.4`: módulo `local_worker.py`; `devhub workers local` inventário sem registro remoto, `models benchmark` com limites fixos e `keep_alive` finito, resultado persistido em SQLite com métricas da API do Ollama, `devhub wizard` interativo (sem compras, downloads implícitos ou privilégios). Instaladores atualizados para módulo novo e versão 0.1.4. Testes novos adicionados para autorização e telemetria, aguardando validação completa em CI e LXC real. Os dois PRs de base seguem draft até homologação.
+
+Ainda não implementado: servidor de worker remoto, autenticação mTLS, comunicação segura entre LXCs, pesquisas web interativas ricas, benchmarks com controle de qualidade e repetição, registro automático de novos motores, portal web.
+
+## IA-01 — homologação 0.1.4 confirmada em 2026-11-22
+
+Operador enviou `devhub --version=0.1.4`, `workers local` detectando RTX 3060 Ti 8192 MiB, Ollama 0.40.17 e modelos `qwen2.5-coder:3b`/`qwen3:4b`. `models benchmark qwen2.5-coder:3b --trust-local-endpoint --keep-alive 5m` retornou resposta válida, 112,73 tokens/s geração, 554,98 tokens/s avaliação do prompt, total 2,6702 s, carga do modelo 2,2583 s, 36 tokens gerados, 2.163.568.803 bytes reportados tanto em size quanto size_vram. `models running` confirmou modelo em memória após execução, expiry 2026-11-23 01:07 UTC. Evidência: `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`. A GPU foi inferida da telemetria reportada e do teste local; métricas não substituem benchmark estatístico. O wizard interativo não foi homologado nesta evidência.
