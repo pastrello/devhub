@@ -64,3 +64,16 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Authenticated, authorized Worker Manager for multiple Linux/Windows nodes.
 - [ ] Stream-safe model pull/status reporting and signed binary lifecycle manager.
 - [ ] Browser-based portal to simplify search, downloads and worker management.
+
+
+## 0.1.5 worker inventory milestones
+
+- [x] Versioned strict metadata manifest for local worker snapshot export.
+- [x] Explicit registration/import/replacement/removal with confirmation and audit via existing DevHub state.
+- [x] Basic 15-minute stale snapshot reporting, never masquerading as a live authenticated heartbeat.
+- [x] No remote endpoint, shell commands, cloud billing, API exposures or credentials during this phase.
+- [ ] Test the 0.1.5 CLI on IA-01 and re-run full test suite.
+- [ ] Add second LXC/VM inventory using manually transferred snapshot.
+- [ ] Authenticated worker enrollment, TLS channel, key rotation and revocation.
+- [ ] Verified heartbeats, device health, queueing, per-worker authorization and resource budgets.
+- [ ] Integrated web portal and work distribution when remote transport is proven safe.
