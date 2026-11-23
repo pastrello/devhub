@@ -102,3 +102,16 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Test enrollment/rotation/revocation, session teardown and replay protection.
 - [ ] Deploy an explicitly approved authenticated inventory-only service on a private network after firewall/identity review.
 - [ ] Remote inference remains blocked pending separate policy review.
+
+
+## Decisão do laboratório: um único LXC até amadurecer o Worker Manager
+
+- [x] OpenSSL 3.5.9 e **8/8 testes mTLS reais OK no Rocky IA-01** (Python 3.12) em 22/11/2026.
+- [ ] Confirmar saída final da suíte geral no IA-01; a execução foi informada, mas não seu resultado final.
+- [ ] Implementar framing JSON delimitado, tamanho máximo, versão e ação `inventory.read`, usando somente `127.0.0.1`.
+- [ ] Diferenciar coordenador e worker em processos locais, com credenciais temporárias e armazenamento separado para teste (sem daemon persistente).
+- [ ] Testar negações/replay, revogação de pin, rotação, timeouts e isolamento; não autorizar comandos/execução remota.
+- [ ] Medir RAM, disco, VRAM e concorrência antes de propor aumento do LXC.
+- [ ] **Marco para pedir novos LXCs**: protocolo autenticado validado no Rocky/CI, segurança das ações read-only, instaladores por papel, firewall e rollback documentados, perfil de recursos fundamentado em métricas. Enviar instruções e dimensionamento ao operador quando cumprido, antes de implantar outros contêineres.
+
+Não solicitar novos LXCs, GPU extra ou alteração Proxmox enquanto houver somente trabalho de protocolo, API local e autenticação.
