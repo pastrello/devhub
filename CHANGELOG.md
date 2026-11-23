@@ -63,3 +63,8 @@
 - Acrescentados dois testes de regressão que reproduzem falha real em `sqlite3.ProgrammingError`.
 - O cadastro de workers e os arquivos SQLite existentes são preservados no upgrade via `install-system.sh --install`.
 - Homologação de integração no IA-01 e execução completa da suíte pendentes.
+
+
+### Homologação da suíte no IA-01
+
+O operador confirmou `python3.12 -m unittest discover -s tests -v` encerrando com `OK`. Ajustado caminho de checkout nos exemplos para `/software/devhub`. Execução específica de `workers show` após a correção e status do GitHub Actions ainda não foram fornecidos.
