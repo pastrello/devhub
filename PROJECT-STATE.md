@@ -121,3 +121,17 @@ Aumentar RAM/disco **apenas se medição demonstrar necessidade** (uso real, dad
 ## Task #001 — Primeiro teste de tarefa de geração de código
 
 O operador enviou ao DevHub `run "$TASK" --provider ollama --trust-local-endpoint` com `--approve-local qwen2.5-coder:3b`; obteve `status: ready`, `provider: ollama` e código Python gerado, confirmando o caminho CLI → modelo local → resposta. **Qualidade reprovada** em análise estática: `isalnum()` rejeita hífens (ID `ia-01` é indevidamente falso), limitação indevida a um hífen, IDs com pontos classificados como válidos nos testes, letras maiúsculas aceitas e somente dois métodos unittest de três solicitados. Evidência: `docs/evidence/2026-11-22-task001-worker-id-quality.md`. Não foi executado código arbitrário: somente gerado texto. Não confundir `status=ready` com aprovação da tarefa. Criado Issue #10 para Task Manager com critérios independentes, avaliação objetiva, sandbox e revisão antes de qualquer commit. IA-01 permanece o único laboratório; mTLS remoto continua experimental.
+
+
+## 0.1.7-lab — Task Manager Fase 1, tarefa #001
+
+O operador executou a primeira tarefa real (`qwen2.5-coder:3b`) no DevHub: houve inferência e resposta, porém o código gerado tem problemas semânticos visíveis (`isalnum()` rejeita hífen, hífens múltiplos indevidamente rejeitados, exemplo com ponto marcado válido e apenas dois testes quando eram pedidos três). A evidência textual está em `docs/evidence/2026-11-22-task001-worker-id-quality.md`. Originou-se o Issue #10.
+
+Criada branch `feat/task-manager-0.1.7-lab`, baseada no laboratório mTLS, com `task_manager.py` e comandos `tasks create|evaluate|run|show|list`. Primeiro perfil versionado `worker-id-validator-v1`, modelo Ollama local explícito, aprovação obrigatória, nenhuma execução do código gerado, histórico de até 5 tentativas e SHA256 da saída; critérios AST estáticos independentes da saída da IA. Capturada a resposta do usuário em fixture `tests/fixtures/task001-original.json` para regressão que deve reprovar. A execução ao vivo no IA-01 e CI para esta branch ainda precisam ser comprovados; instalação em `/opt/devhub` deve permanecer 0.1.5.1 até homologação explícita.
+
+Escopo deliberadamente restrito: somente uma tarefa-padrão aceita; `static_passed_review_required` não equivale a passar testes. Não há sandbox, execução de scripts/pytest, revisões por outra IA, edição Git, persistência PostgreSQL nem distribuir trabalhos entre workers. Próximo passo: executor isolado e testes adversariais independentes (Issue #10), enquanto rede/autenticação de workers segue Issue #5.
+
+
+### Task Manager: CI aprovado, homologação no IA-01 pendente
+
+GitHub Actions run #192 / ID `45104026687` concluiu com **132 testes OK**, incluindo **21 testes** `test_task_manager` na branch experimental (Python 3.12 Ubuntu). Teste da fixture real da Tarefa #001, comandos CLI com SQLite temporário, recusa de endpoint remoto e não execução de código gerado foram exercitados. Evidência: `docs/evidence/2026-11-23-task001-manager-acceptance.md`. Os commits posteriores são apenas refinamentos da fixture original, limite de resposta persistida e documentação, cuja nova execução de CI deve ser verificada. A versão operacional de `/opt/devhub` continua 0.1.5.1; nenhuma instalação da versão de laboratório foi solicitada ao operador.

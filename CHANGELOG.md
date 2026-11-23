@@ -96,3 +96,13 @@ O operador confirmou `python3.12 -m unittest discover -s tests -v` encerrando co
 ### Evidência de GitHub Actions para 0.1.6 experimental
 
 GitHub Actions run #161 (commit `5249948a`) concluído com sucesso no Ubuntu/Python3.12.16: **111 testes OK**, incluindo 8 casos reais de handshake mTLS em loopback e verificação de scripts Bash. Teste de integração no Rocky IA-01 ainda pendente.
+
+
+## 0.1.7-lab — Task Manager phase 1 (experimental)
+
+- `task_manager.py` with fixed acceptance profile for worker-ID validation and local-only Ollama inference with explicit approval.
+- CLI `tasks create|list|show|evaluate|run`, isolated SQLite task records and up to five evaluation events.
+- Independent static AST screening: rejects the original Qwen code of Task #001, records detailed failure reasons and never runs generated Python.
+- Test fixture with actual Qwen response plus unit/CLI regression tests.
+- Success of static screening is pending human review; sandbox, Git edits and remote execution are out of scope.
+- Operational DevHub 0.1.5.1 unchanged; no deployment or new services.

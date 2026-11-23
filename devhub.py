@@ -11,11 +11,12 @@ import online_catalog as oc
 import ollama_registry as rg
 import local_worker as lw
 import worker_registry as wr
+import task_manager as tm
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlsplit
 from urllib import request, error, parse
 
-VERSION = '0.1.5.1'
+VERSION = '0.1.7-lab'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
@@ -187,9 +188,34 @@ def configure_engine_parsers(sub):
     forget = wsub.add_parser('forget'); forget.add_argument('worker_id')
     forget.add_argument('--confirm-forget', action='store_true')
     sub.add_parser('wizard', help='Interactive read-first walkthrough for local engines/models')
+    tasks = sub.add_parser('tasks', help='Local task lifecycle: no generated code execution')
+    tsub = tasks.add_subparsers(dest='task_command', required=True)
+    create = tsub.add_parser('create', help='Register a fixed acceptance profile')
+    create.add_argument('--id', required=True)
+    create.add_argument('--model', required=True)
+    create.add_argument('--profile', default=tm.PROFILE, choices=[tm.PROFILE])
+    tsub.add_parser('list')
+    show_task = tsub.add_parser('show'); show_task.add_argument('task_id')
+    run_task = tsub.add_parser('run'); run_task.add_argument('task_id')
+    run_task.add_argument('--trust-local-endpoint', action='store_true')
+    eval_task = tsub.add_parser('evaluate'); eval_task.add_argument('task_id')
+    eval_task.add_argument('--response-file', required=True)
 
 
 def manage(a, ollama, state):
+    if a.cmd == 'tasks':
+        if a.task_command == 'create':
+            return tm.create(state, a.id, model=a.model, profile=a.profile)
+        if a.task_command == 'list':
+            return tm.list_tasks(state)
+        if a.task_command == 'show':
+            return tm.show(state, a.task_id)
+        if a.task_command == 'evaluate':
+            return tm.evaluate_file(state, a.task_id, a.response_file)
+        if a.task_command == 'run':
+            return tm.run(state, ollama, a.task_id,
+                          approved=a.approve_local, trust_local_endpoint=a.trust_local_endpoint)
+        raise Blocked('Unknown tasks operation')
     if a.cmd == 'gpu':
         return em.gpu_inventory()
     if a.cmd == 'workers':
@@ -440,7 +466,7 @@ def main(argv=None):
     a = p.parse_args(argv)
     os.umask(0o077)
     state = State(Path(a.state))
-    action = a.cmd + ('.' + (getattr(a, 'engine_command', None) or getattr(a, 'model_command', None)) if a.cmd in ('engines','models') else '')
+    action = a.cmd + ('.' + (getattr(a, 'engine_command', None) or getattr(a, 'model_command', None) or getattr(a, 'task_command', None)) if a.cmd in ('engines','models','tasks') else '')
     try:
         ollama = Ollama(a.ollama)
         if a.cmd in ('doctor','discover'):
@@ -449,7 +475,7 @@ def main(argv=None):
             if a.cmd == 'discover': state.save('discovery', out)
         elif a.cmd == 'catalog': out = state.catalog()
         elif a.cmd == 'costs': out = state.costs()
-        elif a.cmd in ('engines', 'models', 'gpu', 'workers', 'wizard'):
+        elif a.cmd in ('engines', 'models', 'gpu', 'workers', 'wizard', 'tasks'):
             out = manage(a, ollama, state)
         elif a.cmd == 'pull':
             if not a.confirm_download or not a.trust_local_endpoint:
@@ -471,9 +497,9 @@ def main(argv=None):
         state.event(action, audit_status)
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0 if audit_status not in ('blocked','review') else 2
-    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError, tm.TaskError) as exc:
         state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
-        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError)) else type(exc).__name__}), file=sys.stderr)
+        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError, tm.TaskError)) else type(exc).__name__}), file=sys.stderr)
         return 2
     finally:
         state.db.close()
