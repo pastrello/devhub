@@ -12,6 +12,7 @@ install -m 600 engine_manager.py "$HOME/.local/lib/devhub/engine_manager.py"
 install -m 600 online_catalog.py "$HOME/.local/lib/devhub/online_catalog.py"
 install -m 600 ollama_registry.py "$HOME/.local/lib/devhub/ollama_registry.py"
 install -m 600 local_worker.py "$HOME/.local/lib/devhub/local_worker.py"
+install -m 600 worker_registry.py "$HOME/.local/lib/devhub/worker_registry.py"
 printf '#!/usr/bin/env bash\nexec %q %q "$@"\n' "$(command -v "$python_bin")" "$HOME/.local/lib/devhub/devhub.py" > "$HOME/.local/bin/devhub"
 chmod 700 "$HOME/.local/bin/devhub"
 "$HOME/.local/bin/devhub" --version
