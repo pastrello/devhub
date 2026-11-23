@@ -11,3 +11,8 @@ Model discovery is opt-in for each `models online` request. Search terms go to H
 ## Model preflight and supply chain (0.1.3)
 
 An official registry manifest is not equivalent to a signed license, a vetted model, a trustworthy quantization or a guaranteed fit. Public tags can be retargeted. Every automated installation requires a stored preflight less than one hour old, unchanged manifest fingerprint, enough estimated disk space and explicit flags confirming download, license review and locally trusted inference. Off-host installation through unauthenticated Ollama API is blocked in the new command. The legacy curated-only pull remains for compatibility; use the reviewed preflight path for new models. Future hardened implementation should bind model digest to actual installed artifact and check original model card/license and runner compatibility. Do not grant broad permissions to Ollama's model directories to satisfy a non-root DevHub installer.
+
+
+## 0.1.4 local worker and benchmark
+
+Only local Ollama (localhost/127.0.0.1/::1) is accepted for automated benchmarks, with explicit `--trust-local-endpoint` approval. The wizard requires an interactive terminal; guided preflight does not download anything and performance probes require explicit confirmation. Benchmark prompts are fixed and not customer data, but generated content/telemetry is saved in the per-user SQLite registry. This is not a production multiagent sandbox. Remote worker registration, exposed ports, identity management and cloud execution are intentionally absent.
