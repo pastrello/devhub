@@ -36,3 +36,12 @@
 - Fail-closed on unsupported manifest-list schema, unknown license or capacity problems; licensed review remains human.
 - No commercial services, cloud calls for inference or automatic infrastructure modifications.
 - 15 registry parser tests executed locally; CLI regression CI requested, and real Rocky LXC test pending.
+
+
+## 0.1.4 — local worker diagnostics and interactive assistant (lab branch)
+
+- Local worker status: OS/architecture/GPU/Ollama models.
+- Bounded synthetic Ollama benchmark, token timings, VRAM residency, finite keep_alive, SQLite evidence.
+- Interactive wizard for safe discovery, preflight and local model tests.
+- Cloud costs and remote execution remain disabled; new tests added for blocking unauthorized operations.
+- Lab homologation and CI confirmation pending.
