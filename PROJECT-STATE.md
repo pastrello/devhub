@@ -61,3 +61,12 @@ Ainda não implementado: servidor de worker remoto, autenticação mTLS, comunic
 ## IA-01 — homologação 0.1.4 confirmada em 2026-11-22
 
 Operador enviou `devhub --version=0.1.4`, `workers local` detectando RTX 3060 Ti 8192 MiB, Ollama 0.40.17 e modelos `qwen2.5-coder:3b`/`qwen3:4b`. `models benchmark qwen2.5-coder:3b --trust-local-endpoint --keep-alive 5m` retornou resposta válida, 112,73 tokens/s geração, 554,98 tokens/s avaliação do prompt, total 2,6702 s, carga do modelo 2,2583 s, 36 tokens gerados, 2.163.568.803 bytes reportados tanto em size quanto size_vram. `models running` confirmou modelo em memória após execução, expiry 2026-11-23 01:07 UTC. Evidência: `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`. A GPU foi inferida da telemetria reportada e do teste local; métricas não substituem benchmark estatístico. O wizard interativo não foi homologado nesta evidência.
+
+
+## 0.1.5 — Worker Registry passivo
+
+Implementado na branch `feat/worker-registry-0.1.5` a partir da 0.1.4 homologada: `worker_registry.py` com manifesto versionado `schema:1`, ID explícito, horário UTC, sistema, arquitetura, dados Ollama e GPUs, formatos estritos e limite de arquivo de 32 KiB. `devhub workers snapshot --id` exporta inventário local sem registro; `enroll-local`, `import-file` com confirmação explícita, `list`, `show`, `forget` gerenciam metadados SQLite. Reclassificação de snapshots com mais de 900 segundos como `stale_snapshot`. Importação nunca autoriza execução remota, não abre portas nem grava credenciais.
+
+Evidência de laboratório existente: 0.1.4 `workers local`, `models benchmark` e `models running` homologados com Qwen2.5-Coder 3B e RTX 3060 Ti, descrita em `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`. Novos testes de 0.1.5 foram escritos e versionados; execução completa do CI, o instalador 0.1.5 no LXC e importação real de segundo worker permanecem pendentes.
+
+NÃO implementado: registro remoto autenticado, heartbeat/TTL de conectividade real, job scheduler, sincronização de modelos, invocação de APIs externas, gerenciamento de serviços nos workers, mTLS/PSK e quotas distribuídas. O cadastro não deve ser representado como autorização de tráfego ou cluster funcional.
