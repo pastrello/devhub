@@ -75,3 +75,8 @@ NÃO implementado: registro remoto autenticado, heartbeat/TTL de conectividade r
 ## DevHub 0.1.5.1 — hotfix SQLite no comando workers show
 
 Operador confirmou `workers enroll-local --id ia-01 --confirm-enroll` e `workers list` funcionando (worker IA-01, 2 modelos, 1 GPU, snapshot recente). O comando `workers show ia-01` falhou com `sqlite3.ProgrammingError: Error binding parameter 2: type 'dict' is not supported`. Causa: `worker_registry.show` devolvia objeto em `out['status']`, e `main` encaminhava o dicionário para a coluna TEXT da tabela de auditoria. A resposta agora usa `status: ok` e `worker: {...}`; a camada comum de auditoria normaliza estados não-textuais para `ok`. Dois testes de regressão reproduzem o comando com SQLite real em memória temporária e protegem contra regressões futuras. Release identificada como 0.1.5.1 em `devhub --version`, apenas na branch de laboratório. **Não requer recriação do banco ou cadastro já existente**. Execução da suíte no LXC ainda pendente.
+
+
+## Validação de testes 0.1.5.1 — IA-01
+
+O operador confirmou que `python3.12 -m unittest discover -s tests -v` terminou com `OK` no laboratório. Isso valida a suíte de testes disponível na árvore de trabalho do IA-01, conforme relato do operador; quantidade exata e execução no GitHub Actions não foram informadas. **A execução pós-hotfix de `devhub workers show ia-01` ainda não foi demonstrada neste registro**. A raiz do checkout no contêiner é **`/software/devhub`** (não `/root/software/devhub`); utilizar esse caminho nos próximos comandos. A instalação global em `/opt/devhub` e o estado em `/var/lib/devhub` são caminhos distintos e não foram alterados por essa correção documental.
