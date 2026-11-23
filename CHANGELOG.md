@@ -54,3 +54,12 @@
 - CLI `workers snapshot|enroll-local|import-file|list|show|forget`.
 - No automatic enrollment, remote connection, credentials, downloads or task execution.
 - New unit tests for rejection of malicious manifests, freshness and explicit approval.
+
+
+## 0.1.5.1 — correção workers show e auditoria
+
+- Corrigido `workers show ID`: retorno JSON inclui `status: "ok"` e estrutura descritiva em `worker` e `manifest`.
+- Padronizada auditoria para gravar um estado textual no SQLite, evitando exceção ao receber estruturas JSON.
+- Acrescentados dois testes de regressão que reproduzem falha real em `sqlite3.ProgrammingError`.
+- O cadastro de workers e os arquivos SQLite existentes são preservados no upgrade via `install-system.sh --install`.
+- Homologação de integração no IA-01 e execução completa da suíte pendentes.
