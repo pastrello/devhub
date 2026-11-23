@@ -166,6 +166,8 @@ def evaluate(state,task_id,raw,*,source,duration_seconds=None):
         raise TaskError('Maximum 5 attempts per lab task')
     if not isinstance(raw,str):
         raise TaskError('Response must be text')
+    if len(raw.encode('utf-8')) > MAX_BYTES:
+        raise TaskError('Response exceeds the 16KiB stored-output limit')
     report=static_screen(raw)
     record['attempt']+=1
     record['updated_at']=_now()
