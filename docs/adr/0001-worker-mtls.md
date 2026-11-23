@@ -39,3 +39,8 @@ O registro `worker_registry.py` apenas mantém snapshots. Um JSON importado pode
 - Python 3.12 `ssl`: https://docs.python.org/3.12/library/ssl.html
 - Issue de evolução: https://github.com/pastrello/devhub/issues/5
 - Origem do laboratório: `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`
+
+
+## 2026-11-22 — Primeira evidência de handshake real
+
+A política mTLS já teve seus 15 testes unitários validados pelo operador em Python 3.12 no IA-01. Na branch experimental `feat/worker-mtls-loopback-0.1.6`, acrescentaram-se **oito testes de integração reais** (Python 3.13.5 + OpenSSL 3.5.5 no ambiente de desenvolvimento), cobrindo CA, certificado de cliente, SAN, nome do servidor, fingerprint e TLS 1.2 recusado. O socket de teste existe somente em `127.0.0.1`, porta efêmera, com certificados de teste descartáveis. Evidência: `docs/evidence/2026-11-22-worker-mtls-loopback.md`. O experimento **não** substitui as etapas de provisionamento, teste no Rocky 9 LXC, revogação, framing de inventário ou autorização de serviço de rede.
