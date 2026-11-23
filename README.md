@@ -333,3 +333,30 @@ python3.12 -m unittest discover -s tests -p 'test_worker_mtls.py' -v
 ```
 
 Para retornar à branch homologada: `git switch feat/worker-registry-0.1.5`. **Não execute `install-system.sh --install` nesta branch experimental:** a base mTLS ainda não é um recurso de operação; certificados e chaves serão provisionados somente em testes isolados futuros.
+
+
+## Validação mTLS real em loopback — branch experimental 0.1.6
+
+O operador confirmou previamente os **15 testes unitários de identidade mTLS no IA-01**. A branch `feat/worker-mtls-loopback-0.1.6` acrescenta testes de integração com **handshake TLS 1.3 real entre cliente e servidor temporários**, vinculados exclusivamente a `127.0.0.1` e a uma porta efêmera escolhida pelo kernel. Os certificados são gerados via OpenSSL em diretório temporário privado com CA exclusiva do teste, um servidor `core.worker.devhub.internal` e cliente `ia-01.worker.devhub.internal`. Os arquivos temporários são descartados ao fim do teste.
+
+Os oito cenários verificam: handshake mTLS válido, cliente sem certificado, SAN errado, certificado de cliente emitido por CA desconhecida, fingerprint não autorizado, nome do servidor errado, CA do servidor não confiável e tentativa de TLS 1.2. Nenhum teste acessa Ollama, modelo, GPU ou outro host.
+
+```bash
+cd /software/devhub
+git fetch origin
+git switch feat/worker-mtls-loopback-0.1.6
+openssl version
+python3.12 -m unittest discover -s tests -p 'test_worker_mtls_loopback.py' -v
+python3.12 -m unittest discover -s tests -v
+```
+
+**Não execute `install-system.sh` nesta branch:** os testes usam o código do checkout, não a instalação global. O `devhub --version` continuará sendo 0.1.5.1. Volte ao código operacional com `git switch feat/worker-registry-0.1.5`.
+
+Os testes foram executados em Python 3.13.5 + OpenSSL 3.5.5 no ambiente de desenvolvimento: **8/8 OK**, sem listener persistente. Ainda precisam ser repetidos no LXC Rocky Linux 9, com Python 3.12 e OpenSSL instalado. Não equivalem a um servidor de inventário em produção nem homologam rede entre contêineres.
+
+
+### Topologia do laboratório (decisão de 22/11/2026)
+
+**Por enquanto, um único contêiner IA-01 servirá como laboratório simultâneo de coordenador e workers**, simulados por processos/sockets em loopback. Diretório de checkout: `/software/devhub`. Instalação operacional atual: DevHub 0.1.5.1. Ollama 0.40.17 e RTX 3060 Ti 8 GiB permanecem inalterados.
+
+O operador confirmou OpenSSL 3.5.9 e 8/8 casos reais de handshake TLS 1.3 mTLS com Python3.12 no IA-01. Não criar outros contêineres, não abrir portas externas nem aumentar recursos sem evidência de consumo real. Quando o protocolo de inventário autenticado, autenticação/revogação, segurança read-only, testes, instaladores por função e dimensionamento estiverem prontos, apresentar instruções para um coordenador separado e workers com modelos — **somente após aprovação administrativa**. Ver Issue #5 e `PROJECT-STATE.md`.

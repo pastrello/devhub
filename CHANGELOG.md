@@ -83,3 +83,16 @@ O operador confirmou `python3.12 -m unittest discover -s tests -v` encerrando co
 - Corrigidas duas falhas identificadas pelo operador no Python 3.12 (`test_post_handshake_peer` e `test_valid_pinned_identity_only_allows_inventory`).
 - Teste adicional rejeita strings `'disabled'`, inteiro 0 e `True` na política de autorização.
 - Ainda não revalidado no IA-01; nenhuma mudança no runtime operacional DevHub 0.1.5.1.
+
+
+## Experimental 0.1.6 — real mTLS loopback tests (no runtime version bump)
+
+- Added OpenSSL-backed integration tests for ephemeral CA, Core/server and worker/client certificate chains, TLS1.3 handshake and identity pinning on 127.0.0.1.
+- 8/8 positive and negative handshake scenarios passed under development Python 3.13.5 + OpenSSL 3.5.5; pending Rocky Python 3.12.
+- CI checks for OpenSSL executable before running full test suite.
+- No network listener deployed, no daemon, no worker remote-control API, no new credentials or cost. Installed DevHub remains 0.1.5.1.
+
+
+### Evidência de GitHub Actions para 0.1.6 experimental
+
+GitHub Actions run #161 (commit `5249948a`) concluído com sucesso no Ubuntu/Python3.12.16: **111 testes OK**, incluindo 8 casos reais de handshake mTLS em loopback e verificação de scripts Bash. Teste de integração no Rocky IA-01 ainda pendente.
