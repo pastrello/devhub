@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
+import stat
 import ssl
 from pathlib import Path
 
@@ -29,6 +30,8 @@ def _require_file(path, name):
     file = Path(path)
     if not file.is_absolute() or file.is_symlink() or not file.is_file():
         raise WorkerTLSError(f'{name}: must be an existing absolute regular file')
+    if name == 'key_file' and (stat.S_IMODE(file.stat().st_mode) & 0o077):
+        raise WorkerTLSError('key_file: private key permissions must be 0600 or stricter')
     return str(file)
 
 
