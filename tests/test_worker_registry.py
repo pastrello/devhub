@@ -129,6 +129,34 @@ class WorkerRegistryTests(unittest.TestCase):
             self.assertEqual(len(wr.list_workers(state)),1)
             state.db.close()
 
+    def test_show_cli_outputs_manifest_and_audits_text_status(self):
+        """Regression: worker details are nested but SQLite audit accepts text only."""
+        import io
+        with tempfile.TemporaryDirectory() as d, patch('local_worker.local_worker', return_value=local_report()):
+            self.assertEqual(devhub.main(['--state', d, 'workers', 'enroll-local',
+                                          '--id', 'ia-01', '--confirm-enroll']), 0)
+            stdout = io.StringIO()
+            with patch('sys.stdout', stdout):
+                self.assertEqual(devhub.main(['--state', d, 'workers', 'show', 'ia-01']), 0)
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output['status'], 'ok')
+            self.assertEqual(output['worker']['worker_id'], 'ia-01')
+            self.assertEqual(output['manifest']['worker_id'], 'ia-01')
+            state = devhub.State(Path(d))
+            self.assertEqual(state.costs()['events']['workers:ok'], 2)
+            state.db.close()
+
+    def test_audit_handles_unexpected_structured_status(self):
+        """Defence in depth: another provider must not crash audit with nested metadata."""
+        import io
+        with tempfile.TemporaryDirectory() as d:
+            with patch('devhub.manage', return_value={'status': {'nested': 'ok'}}):
+                with patch('sys.stdout', io.StringIO()):
+                    self.assertEqual(devhub.main(['--state', d, 'workers', 'list']), 0)
+            state = devhub.State(Path(d))
+            self.assertEqual(state.costs()['events']['workers:ok'], 1)
+            state.db.close()
+
     def test_forget_requires_confirm(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(devhub.main(['--state',d,'workers','forget','ia-01']),2)
