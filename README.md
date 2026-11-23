@@ -77,7 +77,7 @@ O Engine Manager disponibiliza um catálogo **curado e offline** de motores e mo
 Faça snapshot do LXC antes de atualizar. Na branch `feat/lxc-rocky9-ollama-lab`:
 
 ```bash
-cd /root/software/devhub
+cd /software/devhub
 git pull --ff-only
 bash install-system.sh --check
 bash install-system.sh --install
@@ -140,7 +140,7 @@ Esta etapa adiciona **descoberta de metadados públicos**, sem criar assinaturas
 Comandos após atualizar a branch e executar novamente o instalador:
 
 ```bash
-cd /root/software/devhub
+cd /software/devhub
 git fetch origin
 git switch feat/model-discovery-0.1.2
 bash install-system.sh --check
@@ -208,7 +208,7 @@ Versão de laboratório. O Ollama Qwen2.5-Coder 3B foi testado pelo operador no 
 ### Atualização em IA-01
 
 ```bash
-cd /root/software/devhub
+cd /software/devhub
 git fetch origin
 git switch feat/local-worker-benchmark-0.1.4
 bash install-system.sh --check
@@ -305,7 +305,7 @@ Não aplique `chmod 777` em diretórios de sistema. O arquivo do inventário con
 Se na 0.1.5 o comando `devhub workers show ia-01` gerar `sqlite3.ProgrammingError: type 'dict' is not supported`, atualize a branch e reinstale **somente o DevHub**, preservando a base existente:
 
 ```bash
-cd /root/software/devhub
+cd /software/devhub
 git pull --ff-only
 bash install-system.sh --check
 bash install-system.sh --install
