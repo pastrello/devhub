@@ -286,3 +286,15 @@ devhub workers forget ia-02 --confirm-forget
 Isso **não** toca no host de origem e não remove modelos. O próximo passo será estabelecer identidade e comunicação autenticada entre workers, em uma implementação independente e auditável.
 
 Teste de regressão: `python3.12 -m unittest discover -s tests -v`. O novo módulo possui 16 testes de segurança e operações; GitHub Actions e a execução real da versão 0.1.5 no LXC ainda precisam ser verificados.
+
+
+### Permissões de importação em instalação global
+
+`devhub` executa como usuário `devhub`, mesmo quando chamado por root. Se o JSON foi copiado para um diretório acessível somente a root, copie-o para a área privada do aplicativo sem expor seus metadados:
+
+```bash
+install -o devhub -g devhub -m 600 /root/ia-02.json /var/lib/devhub/ia-02.json
+devhub workers import-file /var/lib/devhub/ia-02.json --confirm-import
+```
+
+Não aplique `chmod 777` em diretórios de sistema. O arquivo do inventário contém nomes de máquinas, modelos e dados de hardware; mantenha-o privado.
