@@ -21,3 +21,8 @@ Only local Ollama (localhost/127.0.0.1/::1) is accepted for automated benchmarks
 ## 0.1.5 worker inventory trust model
 
 Imported snapshots are not authenticated, are limited to descriptive metadata and **must never be interpreted as authorization for control-plane access or execution**. Input fields, ID syntax, file size, GPU values and model tags are validated with a strict whitelist. File import rejects symbolic links. `--confirm-import`, `--confirm-enroll` and `--confirm-forget` are required for changes; replacement also requires `--replace`. The 15-minute age limit only indicates how old a snapshot is, **not a verified remote heartbeat**. Public IPs, keys, shell commands, passwords and endpoints are not part of the schema. Future worker agents must be independently authenticated and audited.
+
+
+## Worker mTLS policy — design not deployed
+
+A [ADR-0001](docs/adr/0001-worker-mtls.md) specifies TLS 1.3 + mutual CA-based certificate validation + exact DNS SAN binding (`ia-01.worker.devhub.internal`) + per-worker SHA256 certificate fingerprint allowlisting. Merely importing worker metadata never authorizes a connection. The experimental `worker_mtls.py` accepts only read-only inventory/health actions after post-handshake identity validation; no listener, enrollment network service, runtime certificate generation, privileged integration or remote inference is included. Private keys must be operator provisioned and protected (file permissions `0600` or stricter); never place a CA key or worker private key in Git, audit logs or user chat. Certificate verification/PKI issuance and real handshake negative tests remain required before any remote deployment.
