@@ -464,9 +464,13 @@ def main(argv=None):
                 if out['status'] != 'ready': raise Blocked(out['reason'])
                 if not a.trust_local_endpoint: raise Blocked('Confirm endpoint only performs local inference with --trust-local-endpoint')
                 out['response'] = ollama.generate(out['model'], a.prompt)
-        state.event(action, out.get('status','ok'))
+        # The output is structured JSON; audit status must always be a short string.
+        # Never pass nested worker details or arbitrary objects to SQLite.
+        result_status = out.get('status', 'ok')
+        audit_status = result_status if isinstance(result_status, str) else 'ok'
+        state.event(action, audit_status)
         print(json.dumps(out, ensure_ascii=False, indent=2))
-        return 0 if out.get('status') not in ('blocked','review') else 2
+        return 0 if audit_status not in ('blocked','review') else 2
     except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError) as exc:
         state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
         print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError)) else type(exc).__name__}), file=sys.stderr)
