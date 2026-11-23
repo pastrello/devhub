@@ -73,6 +73,7 @@ class MTLSWorkerPolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             paths=[Path(td)/n for n in ('ca.pem','cert.pem','key.pem')]
             for p in paths: p.write_text('test placeholder')
+            paths[2].chmod(0o600)
             with patch('worker_mtls.ssl.SSLContext') as constructor:
                 ctx=constructor.return_value
                 ctx.minimum_version=None
@@ -88,6 +89,7 @@ class MTLSWorkerPolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             paths=[Path(td)/n for n in ('ca.pem','cert.pem','key.pem')]
             for p in paths: p.write_text('test placeholder')
+            paths[2].chmod(0o600)
             with patch('worker_mtls.ssl.create_default_context') as factory:
                 ctx=factory.return_value
                 auth.client_tls_context(*paths)
@@ -95,6 +97,14 @@ class MTLSWorkerPolicyTests(unittest.TestCase):
                 self.assertEqual(ctx.minimum_version,ssl.TLSVersion.TLSv1_3)
                 self.assertEqual(ctx.verify_mode,ssl.CERT_REQUIRED)
                 self.assertTrue(ctx.check_hostname)
+
+    def test_insecure_private_key_mode_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            paths=[Path(td)/n for n in ('ca.pem','cert.pem','key.pem')]
+            for p in paths: p.write_text('test placeholder')
+            paths[2].chmod(0o644)
+            with self.assertRaises(auth.WorkerTLSError):
+                auth.client_tls_context(*paths)
 
     def test_relative_and_symlink_paths_rejected(self):
         with tempfile.TemporaryDirectory() as td:
