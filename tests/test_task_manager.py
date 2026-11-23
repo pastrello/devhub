@@ -134,6 +134,24 @@ class TaskManagerTests(unittest.TestCase):
             with self.assertRaises(tm.TaskError):
                 tm.evaluate_file(self.state,'task-001',str(p))
 
+    def test_original_user_response_fixture_rejected(self):
+        file=Path(__file__).parent/'fixtures'/'task001-original.json'
+        result=tm.evaluate_file(self.state,'task-001',str(file.resolve()))
+        self.assertEqual(result['task']['acceptance_status'],'acceptance_failed')
+        failed={x['criterion'] for x in result['assessment']['checks'] if not x['passed']}
+        self.assertIn('approved_id_regex',failed)
+        self.assertIn('independent_test_structure',failed)
+        self.assertFalse(result['assessment']['tests_executed'])
+
+    def test_attempt_history_retained_without_execution(self):
+        tm.evaluate(self.state,'task-001',BAD,source='first')
+        tm.evaluate(self.state,'task-001',GOOD,source='second')
+        record=tm.load(self.state,'task-001')
+        self.assertEqual(len(record['history']),2)
+        self.assertEqual(record['history'][0]['acceptance_status'],'acceptance_failed')
+        self.assertEqual(record['history'][1]['acceptance_status'],'static_passed_review_required')
+        self.assertFalse(record['generated_code_executed'])
+
     def test_symlink_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'answer.py';p.write_text(BAD)
