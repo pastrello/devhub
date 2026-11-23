@@ -101,3 +101,8 @@ No IA-01, o operador executou `python3.12 -m unittest discover -s tests -p 'test
 ## Teste de handshake mTLS real em loopback — branch 0.1.6 experimental
 
 O operador concluiu **15/15 testes unitários da política mTLS no Rocky IA-01** (`python3.12 -m unittest discover -s tests -p 'test_worker_mtls.py' -v` com OK). Derivada a branch `feat/worker-mtls-loopback-0.1.6` da `feat/worker-mtls-security-foundation`. Criados `tests/test_worker_mtls_loopback.py`: testes de integração com OpenSSL emitindo CA, servidor e certificados de worker temporários com EKUs e SANs explícitos; socket apenas em `127.0.0.1` com porta do kernel, TLS 1.3, pin SHA256 e checagem da política somente de leitura. Oito cenários (1 aceitação, 7 recusas) **8/8 OK** em Python 3.13.5/OpenSSL 3.5.5 de desenvolvimento; CI passa a exigir `openssl version` para não ignorar testes silenciosamente. **Não há ainda comprovação desta nova suíte no Rocky IA-01** nem teste de rede entre hosts. Nenhum daemon, serviço, token, PKI persistente, download ou configuração de firewall ativados. DevHub instalado no IA-01 permanece 0.1.5.1.
+
+
+### CI confirmado para a branch de handshake real
+
+GitHub Actions `tests` executou no commit `5249948a0999047a7b7d2f3a02bd842b6c66cbb2`, run #161 / ID `45097214967`, no Ubuntu runner com Python 3.12.16: **111 testes, OK**. Os oito casos reais de `test_worker_mtls_loopback` aparecem como `ok`, sem skip, e a etapa `bash -n` passou. O executável OpenSSL também foi verificado. CI: https://github.com/pastrello/devhub/actions/runs/45097214967 . Ainda é obrigatório testar o mesmo cenário no IA-01 Rocky 9 antes de aprovar o transporte para rede interna.
