@@ -90,3 +90,15 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Authenticated read-only worker inventory service, initially bound to loopback for isolated tests.
 - [ ] Explicit firewall rules and network-only-on-approval worker enrollment.
 - [ ] Remote inference and scheduling only after independent security review.
+
+
+## 0.1.6 loopback mutual TLS validation
+
+- [x] 15 mTLS authorization-policy unit tests passed on IA-01 Python 3.12 (operator confirmed).
+- [x] Real TLS 1.3 mutual handshake on loopback with ephemeral CA/server/worker certs and certificate pinning: 8/8 local development tests passed.
+- [x] Negative tests: no client cert, unknown CA both sides, wrong SAN, invalid pin, wrong hostname and TLS 1.2.
+- [ ] Repeat 8 live loopback tests and full suite in Rocky IA-01.
+- [ ] Define strict bounded signed/authorized inventory-only message framing.
+- [ ] Test enrollment/rotation/revocation, session teardown and replay protection.
+- [ ] Deploy an explicitly approved authenticated inventory-only service on a private network after firewall/identity review.
+- [ ] Remote inference remains blocked pending separate policy review.
