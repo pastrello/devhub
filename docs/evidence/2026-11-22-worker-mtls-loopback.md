@@ -40,3 +40,8 @@ python3.12 -m unittest discover -s tests -v
 ```
 
 Do not run the system installer for these tests; operational DevHub remains 0.1.5.1. Handshake validation in the IA-01 Rocky LXC is pending operator evidence.
+
+
+## Evidência adicional de CI
+
+A execução GitHub Actions `tests` run **45097214967** concluiu `success` no commit `5249948a0999047a7b7d2f3a02bd842b6c66cbb2` usando Python **3.12.16** em Ubuntu. Logs: **111 tests, OK**; os oito testes de handshake real aparecem com `... ok`. Passaram também `openssl version` e a verificação de sintaxe Bash. URL: https://github.com/pastrello/devhub/actions/runs/45097214967 . Não confundir CI Ubuntu com homologação no Rocky IA-01.
