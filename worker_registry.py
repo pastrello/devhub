@@ -31,7 +31,7 @@ def validate_manifest(item, *, now=None):
             'schema', 'worker_id', 'observed_at', 'hostname',
             'os', 'architecture', 'ollama', 'gpus'}:
         raise WorkerRegistryError('Unexpected or missing worker fields')
-    if item['schema'] != VERSION or not valid_id(item['worker_id']):
+    if type(item['schema']) is not int or item['schema'] != VERSION or not valid_id(item['worker_id']):
         raise WorkerRegistryError('Invalid worker schema or ID')
     hostname = _limited(item['hostname'], 128)
     system = _limited(item['os'], 32)
