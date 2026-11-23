@@ -329,7 +329,7 @@ Para examinar o trabalho experimental sem instalar nada:
 cd /software/devhub
 git fetch origin
 git switch feat/worker-mtls-security-foundation
-python3.12 -m unittest tests.test_worker_mtls -v
+python3.12 -m unittest discover -s tests -p 'test_worker_mtls.py' -v
 ```
 
 Para retornar à branch homologada: `git switch feat/worker-registry-0.1.5`. **Não execute `install-system.sh --install` nesta branch experimental:** a base mTLS ainda não é um recurso de operação; certificados e chaves serão provisionados somente em testes isolados futuros.
