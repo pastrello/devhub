@@ -58,7 +58,7 @@ Em 2026-11-22, o bootstrap iniciou o serviço e o download `qwen3:4b` concluiu, 
 Na máquina afetada:
 
 ```bash
-cd /root/software/devhub
+cd /software/devhub
 git pull
 bash scripts/repair-ollama-lxc.sh --check
 ls -lh /usr/lib/ollama/llama-server
