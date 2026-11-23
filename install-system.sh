@@ -37,7 +37,7 @@ fi
 getent group devhub >/dev/null || { echo "Expected a dedicated devhub group." >&2; exit 1; }
 install -d -m 0755 "$base" "$base/releases"
 install -d -o devhub -g devhub -m 0700 /var/lib/devhub
-release="$base/releases/0.1.5-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+release="$base/releases/0.1.5.1-$(date -u +%Y%m%dT%H%M%SZ)-$$"
 install -d -m 0755 "$release"
 install -m 0644 devhub.py engine_manager.py online_catalog.py ollama_registry.py local_worker.py worker_registry.py "$release/"
 # Keep the previous live release addressable for rollback.
