@@ -51,3 +51,16 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Verify actual downloaded digest, licensing, GPU memory and quantization.
 - [ ] Implement authenticated worker agents and multi-LXC inventory.
 - [ ] Create a streamlined interactive model search/choice/install UI.
+
+
+## 0.1.4 deliverables and next steps
+
+- [x] `workers local`: local inventory of Ollama, installed/running models, GPU and OS.
+- [x] `models benchmark`: bounded fixed-prompt inference with timings/tokens/s and GPU residency snapshot.
+- [x] `wizard`: interactive user-guided menu without implicit downloads or paid APIs.
+- [x] Explicit finite model keep-alive to make post-test `models running` inspection meaningful.
+- [ ] Live 0.1.4 test on Proxmox VE 9 Rocky Linux 9 LXC IA-01.
+- [ ] Multi-run statistical benchmarking with cost, context and prompt-quality evaluation.
+- [ ] Authenticated, authorized Worker Manager for multiple Linux/Windows nodes.
+- [ ] Stream-safe model pull/status reporting and signed binary lifecycle manager.
+- [ ] Browser-based portal to simplify search, downloads and worker management.
