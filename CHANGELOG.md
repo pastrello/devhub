@@ -68,3 +68,10 @@
 ### Homologação da suíte no IA-01
 
 O operador confirmou `python3.12 -m unittest discover -s tests -v` encerrando com `OK`. Ajustado caminho de checkout nos exemplos para `/software/devhub`. Execução específica de `workers show` após a correção e status do GitHub Actions ainda não foram fornecidos.
+
+
+## Worker mTLS foundation — experimental (no release)
+
+- Added `worker_mtls.py`: construction of TLS 1.3 contexts requiring mutual certificates, validation of approved worker DNS SAN and SHA256 certificate fingerprint, and inventory/health-only authorization policy.
+- New `tests/test_worker_mtls.py` covers negative identity/TLS cases and permissions; no live network test run or listener added.
+- ADR-0001 documents rollout and security gates. Operational version remains 0.1.5.1.
