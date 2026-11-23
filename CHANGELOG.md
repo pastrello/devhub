@@ -45,3 +45,12 @@
 - Interactive wizard for safe discovery, preflight and local model tests.
 - Cloud costs and remote execution remain disabled; new tests added for blocking unauthorized operations.
 - Lab homologation and CI confirmation pending.
+
+
+## 0.1.5 — passive multi-worker inventory (lab branch)
+
+- Snapshot export and explicit SQLite registry of local or manually imported worker inventories.
+- Strict metadata-only schema; limits for size/IDs/GPUs/models; 15-minute stale classification.
+- CLI `workers snapshot|enroll-local|import-file|list|show|forget`.
+- No automatic enrollment, remote connection, credentials, downloads or task execution.
+- New unit tests for rejection of malicious manifests, freshness and explicit approval.
