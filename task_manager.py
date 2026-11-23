@@ -53,7 +53,7 @@ def create(state, task_id, *, model, profile=PROFILE):
             'generated_code_executed':False,'acceptance_method':'static_ast_v1',
             'limits':{'max_output_tokens':MAX_TOKENS,'max_output_bytes':MAX_BYTES,
                       'ollama_timeout_seconds':180},
-            'attempt':0,'result':None}
+            'attempt':0,'result':None,'history':[]}
     state.save(key,record)
     return {'status':'created','task':_summary(record)}
 
@@ -172,9 +172,14 @@ def evaluate(state,task_id,raw,*,source,duration_seconds=None):
     record['task_status']='response_received'
     record['acceptance_status']=('static_passed_review_required'
             if report['static_status']=='passed_pending_review' else 'acceptance_failed')
+    response_hash=hashlib.sha256(raw.encode('utf-8')).hexdigest()
     record['result']={'source':source,'generated_response':raw,
-                      'response_sha256':hashlib.sha256(raw.encode('utf-8')).hexdigest(),
+                      'response_sha256':response_hash,
                       'duration_seconds':duration_seconds,'assessment':report}
+    record.setdefault('history',[]).append({
+        'attempt':record['attempt'],'at':record['updated_at'],'source':source,
+        'acceptance_status':record['acceptance_status'],'response_sha256':response_hash,
+        'duration_seconds':duration_seconds,'assessment':report})
     state.save(_key(task_id),record)
     return {'status':'evaluated','task':_summary(record),'assessment':report,
             'notice':'Generated Python not executed or committed; human review required.'}
