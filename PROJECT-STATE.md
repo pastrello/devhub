@@ -84,3 +84,15 @@ O operador confirmou que `python3.12 -m unittest discover -s tests -v` terminou 
 ## IA-01: Worker Registry 0.1.5.1 homologado
 
 O operador confirmou `devhub --version` retornando `0.1.5.1` e `devhub workers show ia-01` retornando `status: ok` sem exceção SQLite. O manifesto cadastrado é `schema=1`, `worker_id=ia-01`, `hostname=IA-01`, arquitetura `x86_64`, Ollama `0.40.17`, modelos `qwen2.5-coder:3b` e `qwen3:4b`, GPU `NVIDIA GeForce RTX 3060 Ti` (8192 MiB, driver 620.73.04). Snapshot `observed_at=2026-11-23T01:18:05.242914+00:00`, `age_seconds=382`, `freshness=recent_snapshot`, `remote_execution=disabled`, `trust=metadata_only_unverified`. A suíte `python3.12 -m unittest discover -s tests -v` foi relatada como OK anteriormente. Conclusão: worker registry local, persistência do snapshot, auditoria de texto e consulta `show` homologados; sem comprovação de comunicação remota ou identidade autenticada. Checkout `/software/devhub`.
+
+
+## Identidade criptográfica para Worker Manager — branch de segurança
+
+Após confirmação do operador, o DevHub 0.1.5.1 foi homologado no IA-01: `workers show ia-01` devolveu `status: ok`, manifesto com 2 modelos e RTX 3060 Ti 8 GiB; testes unitários completos reportados `OK`. Documento de arquitetura mTLS iniciado em `docs/adr/0001-worker-mtls.md`, código experimental `worker_mtls.py` e testes `tests/test_worker_mtls.py` na branch `feat/worker-mtls-security-foundation`, derivada da 0.1.5.1. O código exige TLS 1.3, certificados dos dois lados, SAN por worker e fingerprint aprovado por operador, e só autoriza metadados de inventário/saúde.
+
+**Este código não possui listener, servidor, cliente nem integração ativa com DevHub CLI; não está homologado em rede e não deve ser instalado em produção.** Nenhum firewall, Ollama, driver, porta, certificado ou segredo foi modificado. Execução dos novos testes TLS no IA-01 e integração real mTLS permanecem pendentes. Cadastro de snapshots continua sem autenticação.
+
+
+## Hotfix mTLS — correção da política remote_execution em 2026-11-22
+
+No IA-01, o operador executou `python3.12 -m unittest discover -s tests -p 'test_worker_mtls.py' -v`: 14 testes, 12 OK e 2 FAIL (`test_post_handshake_peer` e `test_valid_pinned_identity_only_allows_inventory`). Causa: `verify_worker_identity` devolvia string `remote_execution: 'disabled'` enquanto a autorização exigia booleano `remote_execution is False` e um teste esperava `False`. Corrigido `worker_mtls.py` para emitir booleano `False` nas identidades mTLS; registros passivos do worker existentes continuam usando texto e seguem sem autoridade. Adicionado teste de regressão rejeitando valor textual `'disabled'`, numérico 0 e booleano True na autorização. Nenhuma porta, certificado ou serviço alterado. **A correção ainda aguarda resultado da suíte no IA-01**; tentativa de executar no ambiente de desenvolvimento via clone GitHub indisponível por DNS.

@@ -77,3 +77,16 @@ Version numbers are tentative; no release claims before tests.
 - [ ] Authenticated worker enrollment, TLS channel, key rotation and revocation.
 - [ ] Verified heartbeats, device health, queueing, per-worker authorization and resource budgets.
 - [ ] Integrated web portal and work distribution when remote transport is proven safe.
+
+
+## Worker Manager: security foundation started
+
+- [x] Final `workers show` and SQLite audit hotfix 0.1.5.1 reported operational on IA-01.
+- [x] Draft mTLS identity/authz ADR with TLS 1.3, worker SAN and pinned certificates.
+- [x] Experimental library: strict server/client TLS context and read-only worker authorization.
+- [x] Negative unit tests for missing/wrong certificates and unauthorized actions (versioned, execution pending).
+- [ ] Test entire new suite in Rocky Python 3.12; verify real mTLS handshake with test certs.
+- [ ] Admin key/certificate provisioning and documented rotation/revocation.
+- [ ] Authenticated read-only worker inventory service, initially bound to loopback for isolated tests.
+- [ ] Explicit firewall rules and network-only-on-approval worker enrollment.
+- [ ] Remote inference and scheduling only after independent security review.

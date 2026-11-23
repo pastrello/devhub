@@ -317,3 +317,19 @@ python3.12 -m unittest discover -s tests -v
 ```
 
 O serviço Ollama, os modelos baixados e o cadastro atual `ia-01` não são modificados por esse upgrade. O erro não apagou o worker; seu `workers list` já demonstrou persistência. Não execute `enroll-local` novamente sem necessidade.
+
+
+## Base de segurança para workers remotos (branch experimental)
+
+O **DevHub 0.1.5.1** está homologado no IA-01 para inventário local e persistência em SQLite. Uma branch separada, `feat/worker-mtls-security-foundation`, introduz `worker_mtls.py` e a [ADR de identidade](docs/adr/0001-worker-mtls.md), com testes unitários para validar SAN, certificados aprovados e autorização limitada a leitura. Essa branch **não inicia serviço de rede, não abre portas e não realiza cadastro remoto**.
+
+Para examinar o trabalho experimental sem instalar nada:
+
+```bash
+cd /software/devhub
+git fetch origin
+git switch feat/worker-mtls-security-foundation
+python3.12 -m unittest discover -s tests -p 'test_worker_mtls.py' -v
+```
+
+Para retornar à branch homologada: `git switch feat/worker-registry-0.1.5`. **Não execute `install-system.sh --install` nesta branch experimental:** a base mTLS ainda não é um recurso de operação; certificados e chaves serão provisionados somente em testes isolados futuros.
