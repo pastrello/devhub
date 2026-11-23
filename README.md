@@ -360,3 +360,52 @@ Os testes foram executados em Python 3.13.5 + OpenSSL 3.5.5 no ambiente de desen
 **Por enquanto, um único contêiner IA-01 servirá como laboratório simultâneo de coordenador e workers**, simulados por processos/sockets em loopback. Diretório de checkout: `/software/devhub`. Instalação operacional atual: DevHub 0.1.5.1. Ollama 0.40.17 e RTX 3060 Ti 8 GiB permanecem inalterados.
 
 O operador confirmou OpenSSL 3.5.9 e 8/8 casos reais de handshake TLS 1.3 mTLS com Python3.12 no IA-01. Não criar outros contêineres, não abrir portas externas nem aumentar recursos sem evidência de consumo real. Quando o protocolo de inventário autenticado, autenticação/revogação, segurança read-only, testes, instaladores por função e dimensionamento estiverem prontos, apresentar instruções para um coordenador separado e workers com modelos — **somente após aprovação administrativa**. Ver Issue #5 e `PROJECT-STATE.md`.
+
+
+## Task Manager 0.1.7-lab — primeira tarefa com avaliação automática (experimental)
+
+A primeira entrega do [Issue #10](https://github.com/pastrello/devhub/issues/10) implementa **registro, inferência local aprovada e avaliação estática** de uma tarefa com critérios fixos. Não executa o código gerado, não instala dependências, não escreve em projetos Git e não abre serviços/portas. O Task Manager usa o SQLite do DevHub, com histórico limitado a cinco tentativas e hash SHA256 de cada resposta. A **única política de aceitação implementada** nesta etapa é `worker-id-validator-v1`, baseada na Tarefa #001.
+
+O operador já provou que `devhub run` consegue obter respostas do Qwen2.5-Coder 3B, mas a resposta original da Tarefa #001 estava incorreta. A fixture real está em `tests/fixtures/task001-original.json` e deve falhar na análise estática sem executar o Python produzido.
+
+### Testes sem modificar a instalação em /opt/devhub
+
+```bash
+cd /software/devhub
+git fetch origin
+git switch feat/task-manager-0.1.7-lab
+python3.12 -m unittest discover -s tests -p 'test_task_manager.py' -v
+python3.12 -m unittest discover -s tests -v
+```
+
+### Exercitar o primeiro ciclo totalmente offline
+
+```bash
+cd /software/devhub
+TASK_STATE=$(mktemp -d /tmp/devhub-tasklab.XXXXXXXX)
+python3.12 devhub.py --state "$TASK_STATE" tasks create --id task-001 --model qwen2.5-coder:3b
+python3.12 devhub.py --state "$TASK_STATE" tasks evaluate task-001 --response-file /software/devhub/tests/fixtures/task001-original.json
+python3.12 devhub.py --state "$TASK_STATE" tasks show task-001
+python3.12 devhub.py --state "$TASK_STATE" tasks list
+```
+
+Resultado esperado: `provider_status: not_checked` (não houve inferência nesta rodada), `task_status: response_received`, `acceptance_status: acceptance_failed`, `generated_code_executed: false`. O arquivo de resposta é importado como `operator_imported_unverified`: **não** autentica uma execução Ollama nova.
+
+### Opcional: nova inferência autorizada no IA-01
+
+Após verificar o ambiente Ollama local (`127.0.0.1:11434`), envie novamente a tarefa — nenhum download é iniciado:
+
+```bash
+python3.12 devhub.py --state "$TASK_STATE" --approve-local qwen2.5-coder:3b tasks run task-001 --trust-local-endpoint
+python3.12 devhub.py --state "$TASK_STATE" tasks show task-001
+```
+
+O comando usa até 512 tokens de saída e a API Ollama local, com limite de tempo existente de 180 s. A saída da IA é persistida no estado isolado, com avaliação estática independente e histórico de tentativas. O modelo pode acertar ou errar: `status: evaluated` significa **avaliação registrada**, não tarefa aprovada.
+
+Os comandos do laboratório são executados diretamente a partir de `/software/devhub`. **Não rode `install-system.sh --install` nesta branch experimental**: a versão operacional implantada continua 0.1.5.1 e o checkout de teste não altera a instalação.
+
+### Limitações da análise estática v1
+
+O avaliador reconhece um padrão regex específico consistente com o contrato real de `worker_registry.py`, checa a presença de `validate_worker_id`, uso de `fullmatch` e pelo menos três testes `unittest`. Não executa esses testes. Pode rejeitar outras implementações corretas ou deixar passar uma solução incorreta que apresente as estruturas esperadas: **`static_passed_review_required` nunca é aprovação funcional**. A próxima etapa é criar um executor sandbox separado, sem rede/segredos, com limites de recursos e casos de teste independentes, antes de permitir commits.
+
+Dados de teste persistem apenas no diretório `$TASK_STATE`; não inclua segredos reais em prompts/respostas ou compartilhe o SQLite fora do laboratório.
