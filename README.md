@@ -298,3 +298,22 @@ devhub workers import-file /var/lib/devhub/ia-02.json --confirm-import
 ```
 
 Não aplique `chmod 777` em diretórios de sistema. O arquivo do inventário contém nomes de máquinas, modelos e dados de hardware; mantenha-o privado.
+
+
+## Correção 0.1.5.1 — workers show
+
+Se na 0.1.5 o comando `devhub workers show ia-01` gerar `sqlite3.ProgrammingError: type 'dict' is not supported`, atualize a branch e reinstale **somente o DevHub**, preservando a base existente:
+
+```bash
+cd /root/software/devhub
+git pull --ff-only
+bash install-system.sh --check
+bash install-system.sh --install
+devhub --version  # 0.1.5.1
+devhub workers show ia-01
+devhub workers list
+devhub costs
+python3.12 -m unittest discover -s tests -v
+```
+
+O serviço Ollama, os modelos baixados e o cadastro atual `ia-01` não são modificados por esse upgrade. O erro não apagou o worker; seu `workers list` já demonstrou persistência. Não execute `enroll-local` novamente sem necessidade.
