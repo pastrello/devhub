@@ -28,3 +28,8 @@ Ollama's registry provides an OCI-like manifest with blob digests and lengths. `
 ## 0.1.4 — bounded local benchmark
 
 `local_worker.py` is a read-only local inventory and one-shot local inference probe. The benchmark uses fixed prompt, bounded tokens/context and explicit `keep_alive`. It records Ollama's nanosecond timing fields and /api/ps VRAM reporting. Inference is explicitly authorized and only loopback URLs are accepted. Model residency can change between inference and /api/ps sampling; absence is not failure. Reported `size_vram / size` is *not* the GPU CPU offload fraction; do not treat it as a reliable CUDA benchmark. `devhub wizard` wraps safe read-only tasks and explicit preflight, never silently purchasing or downloading. Remote worker management remains design-only, waiting for authenticated isolation and registration.
+
+
+## 0.1.5 — zero-trust passive worker registry
+
+Worker records are local SQLite metadata-only snapshots with a whitelist schema, strict limits and an explicit registration/removal gate. They contain **no command path, endpoint, token, IP address or executable hooks**. No network discovery or remote execution occurs. A 15-minute age classifier distinguishes fresh snapshots from stale ones, **not** authenticated liveness. Imported JSON is untrusted and cannot affect routing or permissions. Future encrypted worker transport will have independent identity, certificate/PSK rotation, enrollment, revocation, port restrictions and isolated execution. Never treat the worker registry as a trust anchor or scheduler.
