@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlsplit
 from urllib import request, error, parse
 
-VERSION = '0.1.5'
+VERSION = '0.1.5.1'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
