@@ -70,3 +70,8 @@ Implementado na branch `feat/worker-registry-0.1.5` a partir da 0.1.4 homologada
 Evidência de laboratório existente: 0.1.4 `workers local`, `models benchmark` e `models running` homologados com Qwen2.5-Coder 3B e RTX 3060 Ti, descrita em `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`. Novos testes de 0.1.5 foram escritos e versionados; execução completa do CI, o instalador 0.1.5 no LXC e importação real de segundo worker permanecem pendentes.
 
 NÃO implementado: registro remoto autenticado, heartbeat/TTL de conectividade real, job scheduler, sincronização de modelos, invocação de APIs externas, gerenciamento de serviços nos workers, mTLS/PSK e quotas distribuídas. O cadastro não deve ser representado como autorização de tráfego ou cluster funcional.
+
+
+## DevHub 0.1.5.1 — hotfix SQLite no comando workers show
+
+Operador confirmou `workers enroll-local --id ia-01 --confirm-enroll` e `workers list` funcionando (worker IA-01, 2 modelos, 1 GPU, snapshot recente). O comando `workers show ia-01` falhou com `sqlite3.ProgrammingError: Error binding parameter 2: type 'dict' is not supported`. Causa: `worker_registry.show` devolvia objeto em `out['status']`, e `main` encaminhava o dicionário para a coluna TEXT da tabela de auditoria. A resposta agora usa `status: ok` e `worker: {...}`; a camada comum de auditoria normaliza estados não-textuais para `ok`. Dois testes de regressão reproduzem o comando com SQLite real em memória temporária e protegem contra regressões futuras. Release identificada como 0.1.5.1 em `devhub --version`, apenas na branch de laboratório. **Não requer recriação do banco ou cadastro já existente**. Execução da suíte no LXC ainda pendente.
