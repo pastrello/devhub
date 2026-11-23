@@ -10,11 +10,12 @@ import engine_manager as em
 import online_catalog as oc
 import ollama_registry as rg
 import local_worker as lw
+import worker_registry as wr
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlsplit
 from urllib import request, error, parse
 
-VERSION = '0.1.4'
+VERSION = '0.1.5.1'
 CLI = {'codex': 'codex', 'claude': 'claude', 'antigravity': 'agy', 'kiro': 'kiro-cli', 'opencode': 'opencode'}
 CLOUD = ('deepseek', 'openrouter', 'openai-api', 'anthropic-api', 'gemini-api')
 
@@ -171,6 +172,20 @@ def configure_engine_parsers(sub):
     workers = sub.add_parser('workers', help='Inspect workers (local only in 0.1.4)')
     wsub = workers.add_subparsers(dest='worker_command', required=True)
     wsub.add_parser('local')
+    snapshot = wsub.add_parser('snapshot', help='Export metadata JSON for manual transfer')
+    snapshot.add_argument('--id', required=True)
+    local = wsub.add_parser('enroll-local', help='Explicitly record local host metadata')
+    local.add_argument('--id', required=True)
+    local.add_argument('--confirm-enroll', action='store_true')
+    local.add_argument('--replace', action='store_true')
+    imported = wsub.add_parser('import-file', help='Read a manually transferred worker snapshot')
+    imported.add_argument('path')
+    imported.add_argument('--confirm-import', action='store_true')
+    imported.add_argument('--replace', action='store_true')
+    wsub.add_parser('list')
+    show = wsub.add_parser('show'); show.add_argument('worker_id')
+    forget = wsub.add_parser('forget'); forget.add_argument('worker_id')
+    forget.add_argument('--confirm-forget', action='store_true')
     sub.add_parser('wizard', help='Interactive read-first walkthrough for local engines/models')
 
 
@@ -178,7 +193,29 @@ def manage(a, ollama, state):
     if a.cmd == 'gpu':
         return em.gpu_inventory()
     if a.cmd == 'workers':
-        return lw.local_worker(ollama, em.gpu_inventory)
+        if a.worker_command == 'local':
+            return lw.local_worker(ollama, em.gpu_inventory)
+        if a.worker_command == 'snapshot':
+            return wr.local_manifest(a.id, lw.local_worker(ollama, em.gpu_inventory))
+        if a.worker_command == 'enroll-local':
+            if not a.confirm_enroll:
+                raise Blocked('Explicit --confirm-enroll required; no worker has been registered')
+            manifest = wr.local_manifest(a.id, lw.local_worker(ollama, em.gpu_inventory))
+            return wr.enroll(state, manifest, replace=a.replace)
+        if a.worker_command == 'import-file':
+            if not a.confirm_import:
+                raise Blocked('Explicit --confirm-import required; no worker has been registered')
+            return wr.enroll(state, wr.read_manifest(a.path), replace=a.replace)
+        if a.worker_command == 'list':
+            return {'workers': wr.list_workers(state),
+                    'warning':'Records are unverified snapshots, not live heartbeats or authorization'}
+        if a.worker_command == 'show':
+            return wr.show(state, a.worker_id)
+        if a.worker_command == 'forget':
+            if not a.confirm_forget:
+                raise Blocked('Explicit --confirm-forget required; only local metadata is affected')
+            return wr.forget(state, a.worker_id)
+        raise Blocked('Unsupported worker operation')
     if a.cmd == 'wizard':
         return wizard(ollama, state)
     if a.cmd == 'engines':
@@ -427,12 +464,16 @@ def main(argv=None):
                 if out['status'] != 'ready': raise Blocked(out['reason'])
                 if not a.trust_local_endpoint: raise Blocked('Confirm endpoint only performs local inference with --trust-local-endpoint')
                 out['response'] = ollama.generate(out['model'], a.prompt)
-        state.event(action, out.get('status','ok'))
+        # The output is structured JSON; audit status must always be a short string.
+        # Never pass nested worker details or arbitrary objects to SQLite.
+        result_status = out.get('status', 'ok')
+        audit_status = result_status if isinstance(result_status, str) else 'ok'
+        state.event(action, audit_status)
         print(json.dumps(out, ensure_ascii=False, indent=2))
-        return 0 if out.get('status') not in ('blocked','review') else 2
-    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError) as exc:
+        return 0 if audit_status not in ('blocked','review') else 2
+    except (OSError, ValueError, KeyError, TypeError, Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError) as exc:
         state.event(action, 'blocked' if isinstance(exc, Blocked) else 'error')
-        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError)) else type(exc).__name__}), file=sys.stderr)
+        print(json.dumps({'status':'error','reason': str(exc) if isinstance(exc, (Blocked, oc.CatalogError, rg.RegistryError, lw.WorkerError, wr.WorkerRegistryError)) else type(exc).__name__}), file=sys.stderr)
         return 2
     finally:
         state.db.close()

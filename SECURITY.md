@@ -16,3 +16,8 @@ An official registry manifest is not equivalent to a signed license, a vetted mo
 ## 0.1.4 local worker and benchmark
 
 Only local Ollama (localhost/127.0.0.1/::1) is accepted for automated benchmarks, with explicit `--trust-local-endpoint` approval. The wizard requires an interactive terminal; guided preflight does not download anything and performance probes require explicit confirmation. Benchmark prompts are fixed and not customer data, but generated content/telemetry is saved in the per-user SQLite registry. This is not a production multiagent sandbox. Remote worker registration, exposed ports, identity management and cloud execution are intentionally absent.
+
+
+## 0.1.5 worker inventory trust model
+
+Imported snapshots are not authenticated, are limited to descriptive metadata and **must never be interpreted as authorization for control-plane access or execution**. Input fields, ID syntax, file size, GPU values and model tags are validated with a strict whitelist. File import rejects symbolic links. `--confirm-import`, `--confirm-enroll` and `--confirm-forget` are required for changes; replacement also requires `--replace`. The 15-minute age limit only indicates how old a snapshot is, **not a verified remote heartbeat**. Public IPs, keys, shell commands, passwords and endpoints are not part of the schema. Future worker agents must be independently authenticated and audited.

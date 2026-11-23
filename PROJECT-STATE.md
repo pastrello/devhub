@@ -61,3 +61,26 @@ Ainda não implementado: servidor de worker remoto, autenticação mTLS, comunic
 ## IA-01 — homologação 0.1.4 confirmada em 2026-11-22
 
 Operador enviou `devhub --version=0.1.4`, `workers local` detectando RTX 3060 Ti 8192 MiB, Ollama 0.40.17 e modelos `qwen2.5-coder:3b`/`qwen3:4b`. `models benchmark qwen2.5-coder:3b --trust-local-endpoint --keep-alive 5m` retornou resposta válida, 112,73 tokens/s geração, 554,98 tokens/s avaliação do prompt, total 2,6702 s, carga do modelo 2,2583 s, 36 tokens gerados, 2.163.568.803 bytes reportados tanto em size quanto size_vram. `models running` confirmou modelo em memória após execução, expiry 2026-11-23 01:07 UTC. Evidência: `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`. A GPU foi inferida da telemetria reportada e do teste local; métricas não substituem benchmark estatístico. O wizard interativo não foi homologado nesta evidência.
+
+
+## 0.1.5 — Worker Registry passivo
+
+Implementado na branch `feat/worker-registry-0.1.5` a partir da 0.1.4 homologada: `worker_registry.py` com manifesto versionado `schema:1`, ID explícito, horário UTC, sistema, arquitetura, dados Ollama e GPUs, formatos estritos e limite de arquivo de 32 KiB. `devhub workers snapshot --id` exporta inventário local sem registro; `enroll-local`, `import-file` com confirmação explícita, `list`, `show`, `forget` gerenciam metadados SQLite. Reclassificação de snapshots com mais de 900 segundos como `stale_snapshot`. Importação nunca autoriza execução remota, não abre portas nem grava credenciais.
+
+Evidência de laboratório existente: 0.1.4 `workers local`, `models benchmark` e `models running` homologados com Qwen2.5-Coder 3B e RTX 3060 Ti, descrita em `docs/evidence/2026-11-22-ia01-qwen25-coder3b-benchmark.md`. Novos testes de 0.1.5 foram escritos e versionados; execução completa do CI, o instalador 0.1.5 no LXC e importação real de segundo worker permanecem pendentes.
+
+NÃO implementado: registro remoto autenticado, heartbeat/TTL de conectividade real, job scheduler, sincronização de modelos, invocação de APIs externas, gerenciamento de serviços nos workers, mTLS/PSK e quotas distribuídas. O cadastro não deve ser representado como autorização de tráfego ou cluster funcional.
+
+
+## DevHub 0.1.5.1 — hotfix SQLite no comando workers show
+
+Operador confirmou `workers enroll-local --id ia-01 --confirm-enroll` e `workers list` funcionando (worker IA-01, 2 modelos, 1 GPU, snapshot recente). O comando `workers show ia-01` falhou com `sqlite3.ProgrammingError: Error binding parameter 2: type 'dict' is not supported`. Causa: `worker_registry.show` devolvia objeto em `out['status']`, e `main` encaminhava o dicionário para a coluna TEXT da tabela de auditoria. A resposta agora usa `status: ok` e `worker: {...}`; a camada comum de auditoria normaliza estados não-textuais para `ok`. Dois testes de regressão reproduzem o comando com SQLite real em memória temporária e protegem contra regressões futuras. Release identificada como 0.1.5.1 em `devhub --version`, apenas na branch de laboratório. **Não requer recriação do banco ou cadastro já existente**. Execução da suíte no LXC ainda pendente.
+
+
+## Validação de testes 0.1.5.1 — IA-01
+
+O operador confirmou que `python3.12 -m unittest discover -s tests -v` terminou com `OK` no laboratório. Isso valida a suíte de testes disponível na árvore de trabalho do IA-01, conforme relato do operador; quantidade exata e execução no GitHub Actions não foram informadas. **A execução pós-hotfix de `devhub workers show ia-01` ainda não foi demonstrada neste registro**. A raiz do checkout no contêiner é **`/software/devhub`** (não `/root/software/devhub`); utilizar esse caminho nos próximos comandos. A instalação global em `/opt/devhub` e o estado em `/var/lib/devhub` são caminhos distintos e não foram alterados por essa correção documental.
+
+## IA-01: Worker Registry 0.1.5.1 homologado
+
+O operador confirmou `devhub --version` retornando `0.1.5.1` e `devhub workers show ia-01` retornando `status: ok` sem exceção SQLite. O manifesto cadastrado é `schema=1`, `worker_id=ia-01`, `hostname=IA-01`, arquitetura `x86_64`, Ollama `0.40.17`, modelos `qwen2.5-coder:3b` e `qwen3:4b`, GPU `NVIDIA GeForce RTX 3060 Ti` (8192 MiB, driver 620.73.04). Snapshot `observed_at=2026-11-23T01:18:05.242914+00:00`, `age_seconds=382`, `freshness=recent_snapshot`, `remote_execution=disabled`, `trust=metadata_only_unverified`. A suíte `python3.12 -m unittest discover -s tests -v` foi relatada como OK anteriormente. Conclusão: worker registry local, persistência do snapshot, auditoria de texto e consulta `show` homologados; sem comprovação de comunicação remota ou identidade autenticada. Checkout `/software/devhub`.

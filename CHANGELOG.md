@@ -45,3 +45,26 @@
 - Interactive wizard for safe discovery, preflight and local model tests.
 - Cloud costs and remote execution remain disabled; new tests added for blocking unauthorized operations.
 - Lab homologation and CI confirmation pending.
+
+
+## 0.1.5 — passive multi-worker inventory (lab branch)
+
+- Snapshot export and explicit SQLite registry of local or manually imported worker inventories.
+- Strict metadata-only schema; limits for size/IDs/GPUs/models; 15-minute stale classification.
+- CLI `workers snapshot|enroll-local|import-file|list|show|forget`.
+- No automatic enrollment, remote connection, credentials, downloads or task execution.
+- New unit tests for rejection of malicious manifests, freshness and explicit approval.
+
+
+## 0.1.5.1 — correção workers show e auditoria
+
+- Corrigido `workers show ID`: retorno JSON inclui `status: "ok"` e estrutura descritiva em `worker` e `manifest`.
+- Padronizada auditoria para gravar um estado textual no SQLite, evitando exceção ao receber estruturas JSON.
+- Acrescentados dois testes de regressão que reproduzem falha real em `sqlite3.ProgrammingError`.
+- O cadastro de workers e os arquivos SQLite existentes são preservados no upgrade via `install-system.sh --install`.
+- Homologação de integração no IA-01 e execução completa da suíte pendentes.
+
+
+### Homologação da suíte no IA-01
+
+O operador confirmou `python3.12 -m unittest discover -s tests -v` encerrando com `OK`. Ajustado caminho de checkout nos exemplos para `/software/devhub`. Execução específica de `workers show` após a correção e status do GitHub Actions ainda não foram fornecidos.
