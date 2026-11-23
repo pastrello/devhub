@@ -90,7 +90,7 @@ def verify_worker_identity(certificate, der, worker_id, allowlist):
         raise WorkerTLSError('Worker certificate fingerprint mismatch')
     return {'worker_id': worker_id, 'identity': 'mtls_san_and_pinned_cert',
             'fingerprint_sha256': digest, 'scope': 'inventory_read_only',
-            'remote_execution': 'disabled'}
+            'remote_execution': False}
 
 
 def verify_worker_peer(tls_socket, worker_id, allowlist):
