@@ -45,3 +45,28 @@ Do not run the system installer for these tests; operational DevHub remains 0.1.
 ## Evidência adicional de CI
 
 A execução GitHub Actions `tests` run **45097214967** concluiu `success` no commit `5249948a0999047a7b7d2f3a02bd842b6c66cbb2` usando Python **3.12.16** em Ubuntu. Logs: **111 tests, OK**; os oito testes de handshake real aparecem com `... ok`. Passaram também `openssl version` e a verificação de sintaxe Bash. URL: https://github.com/pastrello/devhub/actions/runs/45097214967 . Não confundir CI Ubuntu com homologação no Rocky IA-01.
+
+
+## Evidência Rocky Linux LXC IA-01 — relatada pelo operador
+
+```text
+openssl version
+OpenSSL 3.5.9 29 Sep 2026 (Library: OpenSSL 3.5.9 29 Sep 2026)
+
+python3.12 -m unittest discover -s tests -p 'test_worker_mtls_loopback.py' -v
+test_client_rejects_unexpected_server_name ... ok
+test_client_rejects_untrusted_server_ca ... ok
+test_missing_client_certificate_rejected ... ok
+test_real_mutual_tls_13_success_and_no_execution ... ok
+test_tls12_only_client_rejected ... ok
+test_unapproved_pinned_worker_rejected ... ok
+test_unknown_ca_worker_rejected_in_handshake ... ok
+test_wrong_worker_san_rejected ... ok
+
+Ran 8 tests in 0.094s
+OK
+```
+
+O operador também citou a execução da suíte completa, mas não incluiu o resultado final. **Não apresentar essa execução como homologada ainda.**
+
+**Restrição do ambiente:** manter apenas IA-01 como laboratório coordenador/worker, sem criar outros containers até o protocolo read-only autenticado e operação segura estarem prontos. Esta é uma evidência de handshake local, não de comunicação remota entre LXCs.
