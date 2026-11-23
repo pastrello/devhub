@@ -153,7 +153,8 @@ def show(state, worker_id):
     record = state.snapshot('worker:' + worker_id)
     if record is None:
         raise WorkerRegistryError('Worker record not found')
-    return {'status': status(record['manifest']), 'manifest': record['manifest']}
+    return {'status': 'ok', 'worker': status(record['manifest']),
+            'manifest': record['manifest']}
 
 def forget(state, worker_id):
     if not valid_id(worker_id):
