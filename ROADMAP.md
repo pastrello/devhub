@@ -115,3 +115,18 @@ Version numbers are tentative; no release claims before tests.
 - [ ] **Marco para pedir novos LXCs**: protocolo autenticado validado no Rocky/CI, segurança das ações read-only, instaladores por papel, firewall e rollback documentados, perfil de recursos fundamentado em métricas. Enviar instruções e dimensionamento ao operador quando cumprido, antes de implantar outros contêineres.
 
 Não solicitar novos LXCs, GPU extra ou alteração Proxmox enquanto houver somente trabalho de protocolo, API local e autenticação.
+
+
+## Task Manager 0.1.7-lab (Issue #10)
+
+- [x] Receber uma tarefa versionada com ID, prompt fixo, provedor Ollama local e limites de tokens/saída.
+- [x] Separar estado do provedor, resposta recebida e avaliação dos critérios (`acceptance_failed` vs `static_passed_review_required`).
+- [x] Salvar resposta e trilha de até 5 avaliações com hashes e tempos em SQLite isolado.
+- [x] Avaliação determinística somente AST do perfil Task #001, sem executar código gerado.
+- [x] Fixture de regressão com a primeira resposta incorreta do Qwen.
+- [ ] Teste da suíte completa no CI e no IA-01 nesta branch.
+- [ ] Avaliar requisitos arbitrários fornecidos pelo operador sem aceitar critérios sugeridos pela própria IA.
+- [ ] Executor sandbox com tempo/memória/CPU e sem rede, com testes adversariais externos ao prompt.
+- [ ] Loop de correção supervisionado e limites de tentativas.
+- [ ] Integração Git segura, aprovação humana e revisão cruzada.
+- [ ] Integração com workers autenticados quando a etapa do Issue #5 amadurecer.
