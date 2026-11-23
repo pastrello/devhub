@@ -18,10 +18,19 @@ class MTLSWorkerPolicyTests(unittest.TestCase):
     def test_valid_pinned_identity_only_allows_inventory(self):
         result = auth.verify_worker_identity(self.cert, self.der, self.worker, {'ia-01':self.pin})
         self.assertEqual(result['scope'], 'inventory_read_only')
+        self.assertIs(result['remote_execution'], False)
         self.assertTrue(auth.authorized_action(result, 'inventory.read'))
         self.assertTrue(auth.authorized_action(result, 'health.read'))
         for action in ('models.pull','models.delete','inference.run','system.exec','jobs.submit', ''):
             self.assertFalse(auth.authorized_action(result, action))
+
+    def test_string_disabled_is_not_a_boolean_permission(self):
+        """Untrusted metadata string must not bypass strict boolean authorization."""
+        identity = auth.verify_worker_identity(self.cert, self.der, self.worker, {'ia-01':self.pin})
+        self.assertIs(identity['remote_execution'], False)
+        self.assertFalse(auth.authorized_action({**identity, 'remote_execution': 'disabled'}, 'inventory.read'))
+        self.assertFalse(auth.authorized_action({**identity, 'remote_execution': 0}, 'health.read'))
+        self.assertFalse(auth.authorized_action({**identity, 'remote_execution': True}, 'inventory.read'))
 
     def test_unknown_id_rejected(self):
         with self.assertRaises(auth.WorkerTLSError):
