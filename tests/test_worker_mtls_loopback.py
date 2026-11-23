@@ -75,7 +75,7 @@ class LiveWorkerMTLSTests(unittest.TestCase):
             cls.temporary.cleanup()
 
     def exchange(self, *, worker_cert=None, server_hostname=SERVER_DNS, pin=None,
-                 client_ca=None):
+                 client_ca=None, force_tls12=False):
         server_ctx = mtls.server_tls_context(self.ca[1], self.server[1], self.server[0])
         if worker_cert is False:
             client_ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH,
@@ -84,6 +84,9 @@ class LiveWorkerMTLSTests(unittest.TestCase):
         else:
             key, cert = worker_cert if worker_cert is not None else self.worker
             client_ctx = mtls.client_tls_context(client_ca or self.ca[1], cert, key)
+        if force_tls12:
+            client_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+            client_ctx.maximum_version = ssl.TLSVersion.TLSv1_2
         expected_pin = pin if pin is not None else self.correct_pin
         events = Queue(maxsize=1)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
@@ -150,6 +153,11 @@ class LiveWorkerMTLSTests(unittest.TestCase):
 
     def test_client_rejects_unexpected_server_name(self):
         out = self.exchange(server_hostname='unexpected.worker.devhub.internal')
+        self.assertEqual(out['server'], 'rejected')
+        self.assertEqual(out['received'], b'')
+
+    def test_tls12_only_client_rejected(self):
+        out = self.exchange(force_tls12=True)
         self.assertEqual(out['server'], 'rejected')
         self.assertEqual(out['received'], b'')
 
